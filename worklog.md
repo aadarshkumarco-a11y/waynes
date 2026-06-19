@@ -459,3 +459,26 @@ Stage Summary:
 - Backward-compatible: CourseCard prop signature preserved so catalog-view/course-showcase keep working unchanged.
 - Hacking vibe comes from terminal styling, mono fonts, neon green/cyan, glitch/scanlines/cursor-blink — NOT from cramming sections. Layout is simple and clean per user request.
 - All 5 files lint-clean + tsc-clean. No other files touched.
+
+---
+Task ID: 5
+Agent: main (Z.ai Code)
+Task: Redesign entire site with hacking/cyberpunk theme for ethical hacking courses.
+
+Work Log:
+- Analyzed user's reference screenshot (JavaGoat — simple mobile landing with hero card + featured section + bottom nav).
+- Rewrote catalog.ts: 8 ethical hacking courses (Ethical Hacking Bootcamp, Web App Pentesting, Bug Bounty Mastery, Network Pentesting & Metasploit, AD Exploitation, Binary Exploitation, Red Team Ops, Mobile App Hacking), 6 hacker instructors (Ghost404, Nyx Cipher, Binary Reaper, ShadowByte, NullRoute, V3nom), hacking testimonials, hacking blog posts, HACK50 coupon.
+- Rewrote globals.css: cyberpunk design system — deep black bg, neon green #00ff41 + cyan, red destructive, monospace headings (auto via h1/h2/h3), terminal-window, scanlines, glitch, cursor-blink, flicker, pulse-glow, glow-green/cyan/red, text-glow-*, bg-grid.
+- Delegated storefront UI rebuild (home-view, navbar, footer, auth-modal, course-card) to frontend-styling-expert — all rebuilt with terminal aesthetic.
+- Delegated views rebuild (catalog-view, course-detail-view, checkout-view, my-learning-view) to full-stack-developer — all rebuilt with terminal/payment-terminal aesthetic.
+- Rebuilt admin.html: added mono headings, scanlines overlay, terminal sidebar labels, hacking course data, HACK50 coupon, root@waynes branding.
+- Updated layout.tsx metadata for ethical hacking.
+- Verified with Agent Browser: home (hacking theme, "Hack the Planet. Legally." hero), catalog (hacking courses visible), course detail (terminal hero + curriculum), admin.html (terminal dashboard). VLM-confirmed: "strong hacking/cyberpunk vibe, clean layout, no rendering bugs."
+- bun run lint: 0 errors.
+- Pushed to GitHub: https://github.com/aadarshkumarco-a11y/waynes
+
+Stage Summary:
+- Waynes is now a hacking-themed ethical hacking course platform.
+- Simple, clean layout (not dense eCommerce) with strong cyberpunk aesthetic.
+- Standalone admin.html control panel with terminal theme.
+- All pushed to GitHub.
