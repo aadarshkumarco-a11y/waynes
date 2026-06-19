@@ -80,7 +80,7 @@ export function Features() {
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <AnimatedReveal className="mx-auto max-w-2xl text-center">
           <p className="text-sm font-medium uppercase tracking-widest text-emerald-600 dark:text-emerald-400">
-            Why Learniverse
+            Why Waynes
           </p>
           <h2 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">
             Built for learners who actually{" "}

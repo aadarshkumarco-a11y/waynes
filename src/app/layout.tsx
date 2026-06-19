@@ -16,33 +16,33 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Learniverse — Learn Skills That Pay Off",
+  title: "Waynes — Learn Skills That Pay Off",
   description:
     "Premium digital courses on web development, data science, AI/ML, design & marketing. Learn from world-class instructors and earn verifiable certificates.",
   keywords: [
     "online courses",
     "LMS",
-    "Learniverse",
+    "Waynes",
     "web development",
     "data science",
     "AI",
     "design",
     "certification",
   ],
-  authors: [{ name: "Learniverse" }],
+  authors: [{ name: "Waynes" }],
   icons: {
     icon: "/logo.svg",
   },
   openGraph: {
-    title: "Learniverse — Learn Skills That Pay Off",
+    title: "Waynes — Learn Skills That Pay Off",
     description:
       "Premium digital courses taught by world-class instructors. Lifetime access, verifiable certificates.",
-    siteName: "Learniverse",
+    siteName: "Waynes",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Learniverse",
+    title: "Waynes",
     description: "Premium digital courses taught by world-class instructors.",
   },
 };

@@ -45,9 +45,9 @@ interface Settings {
 }
 
 const INITIAL: Settings = {
-  siteName: "Learniverse",
+  siteName: "Waynes",
   tagline: "Learn Skills That Pay Off",
-  supportEmail: "support@learniverse.io",
+  supportEmail: "support@waynes.io",
   currency: "INR",
   defaultTheme: "dark",
   maintenanceMode: false,

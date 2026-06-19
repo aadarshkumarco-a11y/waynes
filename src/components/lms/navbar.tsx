@@ -70,7 +70,7 @@ export function Navbar() {
           <button
             onClick={() => navigate("home")}
             className="flex shrink-0 items-center gap-2"
-            aria-label="Learniverse home"
+            aria-label="Waynes home"
           >
             <div className="grid size-9 place-items-center rounded-xl gradient-brand text-white shadow-glow">
               <GraduationCap className="size-5" />
@@ -165,7 +165,7 @@ export function Navbar() {
                     <LayoutDashboard className="size-4" /> Dashboard
                   </DropdownMenuItem>
                   {isAdmin && (
-                    <DropdownMenuItem onClick={() => navigate("admin")}>
+                    <DropdownMenuItem onClick={() => window.open("/admin.html", "_blank")}>
                       <Shield className="size-4" /> Admin Panel
                     </DropdownMenuItem>
                   )}
@@ -201,7 +201,7 @@ export function Navbar() {
                     <div className="grid size-8 place-items-center rounded-lg gradient-brand text-white">
                       <GraduationCap className="size-4" />
                     </div>
-                    Learniverse
+                    Waynes
                   </SheetTitle>
                 </SheetHeader>
                 <div className="mt-4 flex flex-col gap-1">

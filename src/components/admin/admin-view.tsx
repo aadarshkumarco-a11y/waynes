@@ -153,7 +153,7 @@ function AccessDenied() {
         <h1 className="text-2xl font-bold tracking-tight">Access Denied</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           You need <span className="font-semibold text-foreground">Super Admin</span> privileges to
-          view the Learniverse admin dashboard. Switch to the demo admin account to explore the panel.
+          view the Waynes admin dashboard. Switch to the demo admin account to explore the panel.
         </p>
         <Button onClick={enterAdminDemo} className="mt-6 w-full gap-2" size="lg">
           <Shield className="size-4" /> Switch to Admin (Demo)

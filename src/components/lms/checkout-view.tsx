@@ -35,7 +35,7 @@ import type { Course, Order } from "@/lib/types";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
-const UPI_ID = "learniverse@upi";
+const UPI_ID = "waynes@upi";
 
 const PAYMENT_METHODS = [
   {

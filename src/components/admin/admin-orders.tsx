@@ -115,7 +115,7 @@ function exportCsv(rows: Order[]) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `learniverse-orders-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.download = `waynes-orders-${new Date().toISOString().slice(0, 10)}.csv`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);

@@ -220,3 +220,44 @@ Stage Summary:
 - API-ready architecture: /api/courses (auto-seed), /api/coupons/apply (server validation), /api/orders (CRUD), /api/orders/[id]/{approve,reject,refund,notes}, /api/certificates/verify/[verifyId], /api/subscribers. Prisma schema (18 models) + DB seed helper.
 - Design system: emerald brand (no indigo/blue), glassmorphism, gradients, dark/light mode, Framer Motion animations, custom scrollbar, sticky footer.
 - Dev server running persistently via double-fork daemon on :3000.
+
+---
+Task ID: 4-a
+Agent: frontend-styling-expert
+Task: Rebuild home page as eCommerce storefront (Amazon/Shopify-style, product-forward & dense, NOT marketing sections).
+
+Work Log:
+- Read prior worklog (Tasks 1-3: foundation, admin dashboard, integration). Home was marketing landing (Hero/Stats/Features/Testimonials/Pricing/FAQ/CTA).
+- Read reuse contract: `useCourses()` (override-aware), `useLms` actions (navigate/openCourse/addToCart/isInCart), `CourseCard` / `StarRating` / `AnimatedReveal`, catalog helpers (categories/courseStats/instructorMap/platformStats), format helpers, design system classes (gradient-brand/glass/shadow-glow/bg-grid/no-scrollbar/scrollbar-thin).
+- Rewrote ONLY `src/components/landing/home-view.tsx` (kept `"use client"` + named + default export). Replaced all 10 marketing-section imports with a single self-contained storefront component.
+
+Storefront sections built (in order):
+1. Promo hero banner — slim rounded-3xl gradient-brand band (~h-56), bg-grid overlay + two blurred glow orbs, Framer Motion auto-rotating 3 promo slides (5.5s interval, AnimatePresence mode="wait"), eyebrow + headline + subline + "Shop All Courses" (→navigate catalog) + "Today's Deals" (→smooth-scroll #flash-deals) + amber "Up to {maxDiscount}0ff" badge (max of 60 or live max), slide-dot tabs, two floating product thumbnails (right, hidden on mobile) that open the course on click with live discount badges.
+2. Trust strip — single glass row, 4 inline items (Star 4.8 rating / Users 95K+ learners / Globe 42 countries / ShieldCheck 7-day refund) driven by `platformStats`, divided by `divide-x`, responsive wrap.
+3. Category bar — `no-scrollbar` horizontal pill row: "All" + 6 categories with lucide icon (Code2/BarChart3/Palette/BrainCircuit/Megaphone/Briefcase mapped from catalog `icon` string) + live course count. Active pill = gradient-brand + shadow-glow; aria-pressed. Clicking filters main grid via local `activeCat` state.
+4. Flash Deals row — ⚡ heading + "View all" (→catalog). Horizontal `no-scrollbar` scroll of up to 6 courses with `comparePrice` (discount  0esc). Compact `ProductRowCard` (thumbnail 16/10 + level/student badges + title + instructor + StarRating + price/struck-comparePrice + Add→In Cart button). Wraps in AnimatedReveal.
+5. Main product grid — "All Courses" + result count (with active category name) + sort Select (Popular/Newest/Price L→H/Price H→L/Top Rated). Responsive grid 1/2/3/4 cols of `CourseCard` (reused as-is) staggered via AnimatedReveal delays. Empty state with browse-all fallback.
+6. Bestsellers row — 🔥 heading + "View all". Horizontal scroll of top 6 by `studentCount` reusing `ProductRowCard`.
+7. Categories grid — 6 category cards (icon tile + name + live count + chevron), 2/3/6 cols; clicking sets activeCat AND smooth-scrolls to #all-courses (store-style category navigation).
+8. Slim CTA band — compact gradient-brand rounded-2xl with bg-grid, "Ready to start learning?" + learner count + "Browse Courses" white button.
+
+Design details:
+- ProductRowCard built inline (260-300px width, shrink-0) — thumbnail-left, info-right, prominent price, rose discount badge, Add-to-Cart with In Cart disabled state (reads `isInCart`).
+- Dense spacing: container `gap-10 md:gap-14`, max-w-7xl gutter matching catalog-view.
+- Brand-safe: emerald gradient-brand + amber/rose/white accents; NO indigo/blue; dark-mode-first via bg-card/border tokens.
+- Accessible: semantic `<section aria-label>`/`<ul>`/`<button type="button">`, alt text on all thumbs, aria-labels on icon-only buttons, role="tablist"/role="tab" + aria-selected on slide dots, aria-pressed on pills, label htmlFor on sort Select.
+- Framer Motion: slide transitions (opacity+y), CourseCard already has hover lift; category cards hover-translate-y + chevron slide.
+- Live values from `useCourses()`: flashDeals/bestsellers/filtered/liveCounts/maxDiscount all recompute when admin overrides change (price/featured/published). Unpublished courses auto-hidden by hook.
+
+Lint:
+- `npx eslint src/components/landing/home-view.tsx` → 0 errors, 0 warnings.
+- `npx tsc --noEmit` → no errors in home-view.
+- `bun run lint` project-wide: 1 pre-existing error in `src/components/lms/catalog-view.tsx` (react-hooks/preserve-manual-memoization on its `filtered` useMemo) — NOT in my file, intentionally untouched per task scope.
+
+Stage Summary:
+- Home page transformed from marketing brochure to shoppable storefront: 8 dense, product-forward sections (promo hero / trust strip / category bar / flash deals / main grid / bestsellers / category grid / CTA band).
+- Reused CourseCard/StarRating/AnimatedReveal unchanged; added inline ProductRowCard + CategoryPill + SectionHeader sub-components.
+- All store actions wired (navigate catalog, openCourse on card/thumb, addToCart with In Cart state, smooth-scroll anchors for deals/grid).
+- Mobile-first responsive (1→4 col grid, horizontal-scoll rows, hidden hero thumbs on mobile, wrapping trust strip).
+- File: `src/components/landing/home-view.tsx` (~470 lines, single-file, no other files touched).
+- Lint clean for the edited file.

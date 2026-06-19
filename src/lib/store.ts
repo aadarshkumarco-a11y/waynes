@@ -31,7 +31,7 @@ import {
 // ---------------------------------------------------------------------------
 const DEMO_USER: User = {
   id: "user-demo",
-  email: "alex@learniverse.io",
+  email: "alex@waynes.io",
   name: "Alex Sharma",
   avatar: "https://i.pravatar.cc/120?img=68",
   role: "STUDENT",
@@ -42,7 +42,7 @@ const DEMO_USER: User = {
 
 const DEMO_ADMIN: User = {
   id: "user-admin",
-  email: "admin@learniverse.io",
+  email: "admin@waynes.io",
   name: "Admin",
   avatar: "https://i.pravatar.cc/120?img=60",
   role: "SUPER_ADMIN",
@@ -131,7 +131,7 @@ function seedNotifications(): Notification[] {
     {
       id: "n2",
       type: "SUCCESS",
-      title: "Welcome to Learniverse 🎉",
+      title: "Welcome to Waynes 🎉",
       body: "Your learning journey starts now. Explore 8 world-class courses.",
       read: false,
       createdAt: iso(-120),
@@ -259,6 +259,10 @@ interface LmsState extends NavState, AuthState, CartState {
   announcements: Announcement[];
   activities: ActivityLog[];
   couponList: Coupon[]; // admin-managed copy
+  courseOverrides: Record<
+    string,
+    { price?: number; comparePrice?: number; featured?: boolean; published?: boolean }
+  >;
 
   // Navigation
   navigate: (view: ViewName, params?: Partial<NavState>) => void;
@@ -295,6 +299,13 @@ interface LmsState extends NavState, AuthState, CartState {
   toggleCouponActive: (id: string) => void;
   addCoupon: (c: Omit<Coupon, "id" | "usedCount">) => void;
   deleteCoupon: (id: string) => void;
+
+  // Course overrides (edited from admin.html)
+  setCourseOverride: (
+    id: string,
+    patch: { price?: number; comparePrice?: number; featured?: boolean; published?: boolean }
+  ) => void;
+  removeCourseOverride: (id: string) => void;
 
   // Orders
   checkout: (courseId: string, paymentRef: string, paymentMethod: string) => Order;
@@ -369,6 +380,7 @@ export const useLms = create<LmsState>()(
       announcements: seedAnnouncements(),
       activities: seedActivities(),
       couponList: seedCoupons,
+      courseOverrides: {},
 
       // ---------------- Navigation ----------------
       navigate: (view, params) => {
@@ -409,7 +421,7 @@ export const useLms = create<LmsState>()(
       setAuthOpen: (open, mode = "login") => set({ authOpen: open, authMode: mode }),
       login: (email, _password) => {
         if (!email || !email.includes("@")) return { ok: false, message: "Enter a valid email." };
-        const isAdmin = email.toLowerCase() === "admin@learniverse.io";
+        const isAdmin = email.toLowerCase() === "admin@waynes.io";
         const user: User = isAdmin
           ? DEMO_ADMIN
           : { ...DEMO_USER, email, name: email.split("@")[0].replace(/[^a-zA-Z]/g, " ").trim() || "Student" };
@@ -431,7 +443,7 @@ export const useLms = create<LmsState>()(
         set({ user, authOpen: false });
         get().addNotification({
           type: "SUCCESS",
-          title: "Welcome to Learniverse 🎉",
+          title: "Welcome to Waynes 🎉",
           body: `Hi ${name}, your account is ready. Start exploring courses!`,
         });
         get().addActivity("SIGNUP", `${name} created an account`);
@@ -515,6 +527,21 @@ export const useLms = create<LmsState>()(
         })),
       deleteCoupon: (id) =>
         set((s) => ({ couponList: s.couponList.filter((c) => c.id !== id) })),
+
+      // ---------------- Course Overrides ----------------
+      setCourseOverride: (id, patch) =>
+        set((s) => ({
+          courseOverrides: {
+            ...s.courseOverrides,
+            [id]: { ...(s.courseOverrides[id] || {}), ...patch },
+          },
+        })),
+      removeCourseOverride: (id) =>
+        set((s) => {
+          const next = { ...s.courseOverrides };
+          delete next[id];
+          return { courseOverrides: next };
+        }),
 
       // ---------------- Orders ----------------
       checkout: (courseId, paymentRef, paymentMethod) => {
@@ -867,7 +894,7 @@ export const useLms = create<LmsState>()(
         })),
     }),
     {
-      name: "learniverse-lms",
+      name: "waynes-lms",
       storage: createJSONStorage(() => localStorage),
       // Don't persist the seed catalog of orders/notifications/etc.? We DO want
       // orders to persist so the demo state survives reloads. Keep everything.
@@ -882,6 +909,7 @@ export const useLms = create<LmsState>()(
         announcements: s.announcements,
         activities: s.activities,
         couponList: s.couponList,
+        courseOverrides: s.courseOverrides,
         items: s.items,
         appliedCouponCode: s.appliedCouponCode,
       }),

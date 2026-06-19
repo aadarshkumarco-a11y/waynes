@@ -143,7 +143,7 @@ function MockPlayer() {
             <div className="size-3 rounded-full bg-emerald-400/80" />
           </div>
           <p className="ml-2 min-w-0 truncate text-xs font-medium text-muted-foreground">
-            learniverse.io/learn/fullstack-nextjs-mastery/lesson/3
+            waynes.io/learn/fullstack-nextjs-mastery/lesson/3
           </p>
         </div>
 

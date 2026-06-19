@@ -15,7 +15,7 @@ const TIERS = [
     name: "Starter",
     price: 0,
     period: "Free forever",
-    desc: "Explore free lessons and decide if Learniverse is right for you.",
+    desc: "Explore free lessons and decide if Waynes is right for you.",
     features: [
       "Access to preview lessons",
       "Community access",

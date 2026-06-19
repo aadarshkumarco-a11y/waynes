@@ -147,8 +147,8 @@ export function LearnView() {
     return flat[0];
   }, [flat, lessonId, course, user]);
 
-  // When the lesson changes, reset transient UI state and register last-viewed
-  // via during-render adjustment (avoids setState-in-effect cascading renders).
+  // When the lesson changes, reset transient UI state via during-render
+  // adjustment (allowed — these are local setStates on the SAME component).
   if (
     currentEntry &&
     registeredLessonId !== currentEntry.lesson.id
@@ -156,10 +156,15 @@ export function LearnView() {
     setRegisteredLessonId(currentEntry.lesson.id);
     setCurrentVideoTime(0);
     setTab("overview");
-    if (course && user) {
+  }
+
+  // Register "last viewed" as a side effect (store update must NOT happen
+  // during render — it would propagate to other subscribed components).
+  useEffect(() => {
+    if (currentEntry && course && user) {
       setLastViewed(course.id, currentEntry.lesson.id);
     }
-  }
+  }, [currentEntry?.lesson.id, course?.id, user?.id]);
 
   // Scroll to top on lesson change.
   useEffect(() => {

@@ -63,7 +63,7 @@ export function Pricing() {
     {
       id: "lifetime",
       name: "Lifetime",
-      tagline: "All courses, forever. The complete Learniverse library.",
+      tagline: "All courses, forever. The complete Waynes library.",
       price: "₹49,999",
       period: " one-time",
       cta: "View plans",

@@ -153,7 +153,7 @@ export function Footer() {
         </div>
 
         <div className="mt-10 flex flex-col items-center justify-between gap-3 border-t pt-6 text-sm text-muted-foreground sm:flex-row">
-          <p>© {new Date().getFullYear()} Learniverse. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} Waynes. All rights reserved.</p>
           <p className="flex items-center gap-1.5">
             Made with <span className="text-rose-500">♥</span> for learners worldwide
           </p>

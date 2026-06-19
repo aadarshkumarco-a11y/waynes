@@ -215,7 +215,7 @@ function PublicVerifyPrompt({
           Verify a certificate
         </h1>
         <p className="mx-auto mt-2 max-w-xl text-muted-foreground">
-          Enter a certificate ID to confirm its authenticity. Every Learniverse
+          Enter a certificate ID to confirm its authenticity. Every Waynes
           certificate has a unique verification ID.
         </p>
       </motion.div>
@@ -326,7 +326,7 @@ function VerificationFound({
           <div className="flex-1">
             <p className="text-lg font-bold text-primary">Certificate Verified ✓</p>
             <p className="text-sm text-muted-foreground">
-              This certificate is authentic and was issued by Learniverse.
+              This certificate is authentic and was issued by Waynes.
             </p>
           </div>
           <Button variant="outline" onClick={onBack}>
@@ -447,7 +447,7 @@ function CertificateDisplay({
                 </div>
                 <div>
                   <p className="text-sm font-bold leading-none tracking-tight">
-                    Learniverse
+                    Waynes
                   </p>
                   <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
                     Premium Learning
@@ -525,14 +525,14 @@ function CertificateDisplay({
               <div className="flex-1 text-right">
                 <div className="mb-1 flex h-8 items-end justify-end">
                   <span className="font-[cursive] text-lg italic text-primary">
-                    Learniverse
+                    Waynes
                   </span>
                 </div>
                 <div className="border-t border-foreground/30 pt-1 text-right">
                   <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
                     Authorized by
                   </p>
-                  <p className="text-xs font-semibold">Learniverse Academy</p>
+                  <p className="text-xs font-semibold">Waynes Academy</p>
                 </div>
               </div>
             </div>
@@ -581,7 +581,7 @@ function shareCertificate(cert: Certificate) {
     navigator
       .share({
         title: `${cert.candidateName} — ${cert.courseTitle}`,
-        text: `Verify my Learniverse certificate`,
+        text: `Verify my Waynes certificate`,
         url,
       })
       .catch(() => {});
@@ -686,7 +686,7 @@ function downloadCertificate(cert: Certificate) {
         <div class="brand">
           <div class="logo">🎓</div>
           <div>
-            <div class="name">Learniverse</div>
+            <div class="name">Waynes</div>
             <div class="tag">Premium Learning</div>
           </div>
         </div>
@@ -716,10 +716,10 @@ function downloadCertificate(cert: Certificate) {
           </div>
         </div>
         <div class="col right">
-          <div class="cursive">Learniverse</div>
+          <div class="cursive">Waynes</div>
           <div class="line">
             <div class="k">Authorized by</div>
-            <div class="n">Learniverse Academy</div>
+            <div class="n">Waynes Academy</div>
           </div>
         </div>
       </div>

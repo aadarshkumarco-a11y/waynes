@@ -56,7 +56,6 @@ import { AnimatedReveal } from "@/components/lms/animated-reveal";
 import { useLms } from "@/lib/store";
 import {
   categories,
-  courseBySlug,
   courseStats,
   featuredReviews,
   instructorMap,
@@ -67,6 +66,7 @@ import {
   formatNumber,
   formatPrice,
 } from "@/lib/format";
+import { useCourseBySlug } from "@/hooks/use-courses";
 import type { Course, LessonType } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -319,7 +319,7 @@ export function CourseDetailView() {
   const setAuthOpen = useLms((s) => s.setAuthOpen);
   const navigate = useLms((s) => s.navigate);
 
-  const course = courseSlug ? courseBySlug[courseSlug] : undefined;
+  const course = useCourseBySlug(courseSlug);
 
   // Derived data
   const enrolled = course ? isEnrolled(course.id) : false;

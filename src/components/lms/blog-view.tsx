@@ -86,7 +86,7 @@ export function BlogView() {
         className="text-center"
       >
         <Badge variant="secondary" className="mb-3 gap-1">
-          <Sparkles className="size-3" /> Learniverse Blog
+          <Sparkles className="size-3" /> Waynes Blog
         </Badge>
         <h1 className="text-3xl font-bold tracking-tight sm:text-5xl">
           Insights for <span className="text-gradient-brand">builders</span> &amp; learners
@@ -218,7 +218,7 @@ export function BlogView() {
               <Mail className="size-6 text-white" />
             </div>
             <h3 className="text-2xl font-bold text-white sm:text-3xl">
-              Get the best of Learniverse
+              Get the best of Waynes
             </h3>
             <p className="max-w-md text-white/90">
               One email every week — fresh articles, course drops, and behind-the-scenes

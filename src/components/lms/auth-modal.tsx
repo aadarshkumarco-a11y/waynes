@@ -37,7 +37,7 @@ type SignupValues = z.infer<typeof signupSchema>;
 type ForgotValues = z.infer<typeof forgotSchema>;
 
 export function AuthModal() {
-  const { authOpen, authMode, setAuthOpen, login, signup, loginWithGoogle, resetPassword, enterAdminDemo, enterStudentDemo } =
+  const { authOpen, authMode, setAuthOpen, login, signup, loginWithGoogle, resetPassword, enterStudentDemo } =
     useLms();
   const [showPwd, setShowPwd] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -62,7 +62,7 @@ export function AuthModal() {
     setTimeout(() => {
       const res = signup(v.name, v.email, v.password);
       setLoading(false);
-      if (res.ok) toast.success("Account created! Welcome to Learniverse.");
+      if (res.ok) toast.success("Account created! Welcome to Waynes.");
       else toast.error(res.message);
     }, 500);
   };
@@ -201,7 +201,7 @@ export function AuthModal() {
                   <Button size="sm" variant="secondary" onClick={enterStudentDemo} className="gap-1.5">
                     <UserIcon className="size-3.5" /> Student
                   </Button>
-                  <Button size="sm" variant="secondary" onClick={enterAdminDemo} className="gap-1.5">
+                  <Button size="sm" variant="secondary" onClick={() => { setAuthOpen(false); window.open("/admin.html", "_blank"); }} className="gap-1.5">
                     <GraduationCap className="size-3.5" /> Admin
                   </Button>
                 </div>

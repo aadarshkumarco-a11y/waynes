@@ -265,7 +265,7 @@ export function BlogPostView() {
               </Avatar>
               <div>
                 <p className="font-semibold">{post.authorName}</p>
-                <p className="text-xs text-muted-foreground">Instructor at Learniverse</p>
+                <p className="text-xs text-muted-foreground">Instructor at Waynes</p>
               </div>
             </div>
             <Separator className="my-4" />

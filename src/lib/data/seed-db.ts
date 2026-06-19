@@ -16,10 +16,10 @@ export async function seedDatabase() {
   // instructors as users with SUPER_ADMIN-ish profile (role STUDENT, but used as instructor ref)
   for (const ins of instructors) {
     await db.user.upsert({
-      where: { email: `${ins.id}@learniverse.io` },
+      where: { email: `${ins.id}@waynes.io` },
       create: {
         id: ins.id,
-        email: `${ins.id}@learniverse.io`,
+        email: `${ins.id}@waynes.io`,
         name: ins.name,
         avatar: ins.avatar,
         title: ins.title,

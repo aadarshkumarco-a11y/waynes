@@ -44,9 +44,9 @@ import { CourseCard } from "@/components/lms/course-card";
 import { AnimatedReveal } from "@/components/lms/animated-reveal";
 import { useLms } from "@/lib/store";
 import {
-  courses,
   categories,
 } from "@/lib/data/catalog";
+import { useCourses } from "@/hooks/use-courses";
 import { formatPrice } from "@/lib/format";
 import type { CourseLevel } from "@/lib/types";
 
@@ -301,6 +301,7 @@ function EmptyState({ onReset, hasSearch, onClearSearch }: { onReset: () => void
 // Main view
 // ---------------------------------------------------------------------------
 export function CatalogView() {
+  const courses = useCourses();
   const searchQuery = useLms((s) => s.searchQuery);
   const setSearchQuery = useLms((s) => s.setSearchQuery);
   const [filters, setFilters] = useState<FilterState>(initialFilters);
@@ -354,7 +355,7 @@ export function CatalogView() {
         break;
     }
     return list;
-  }, [searchQuery, filters]);
+  }, [searchQuery, filters, courses]);
 
   const resetFilters = () => setFilters(initialFilters());
   const clearSearch = () => setSearchQuery("");

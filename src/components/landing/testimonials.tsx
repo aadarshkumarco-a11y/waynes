@@ -27,7 +27,7 @@ export function Testimonials() {
           </h2>
           <p className="mt-4 text-base text-muted-foreground sm:text-lg">
             From juniors to seniors, from career-switchers to founders — see how
-            Learniverse helped them level up.
+            Waynes helped them level up.
           </p>
         </AnimatedReveal>
 
