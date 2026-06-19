@@ -261,3 +261,35 @@ Stage Summary:
 - Mobile-first responsive (1→4 col grid, horizontal-scoll rows, hidden hero thumbs on mobile, wrapping trust strip).
 - File: `src/components/landing/home-view.tsx` (~470 lines, single-file, no other files touched).
 - Lint clean for the edited file.
+
+---
+Task ID: 4
+Agent: main (Z.ai Code)
+Task: Rebrand to "Waynes", rebuild home as eCommerce storefront, build standalone admin.html control panel, push to GitHub.
+
+Work Log:
+- Renamed "Learniverse" → "Waynes" across all 20 source files (45 occurrences) via sed (brand text, metadata, storage key learniverse-lms→waynes-lms, emails learniverse.io→waynes.io, UPI id).
+- Added `courseOverrides` to Zustand store (persisted): {price, comparePrice, featured, published} per course, with setCourseOverride/removeCourseOverride actions.
+- Created `src/hooks/use-courses.ts` (useCourses + useCourseBySlug) that apply admin overrides + filter unpublished.
+- Wired CatalogView + CourseDetailView to use the override-aware hooks (admin price/featured/visibility edits now reflect live).
+- Rebuilt `src/components/landing/home-view.tsx` as an eCommerce storefront (delegated to frontend-styling-expert): promo hero carousel, trust strip, category bar, flash deals row, main product grid with sort, bestsellers, categories grid, slim CTA — product-forward, not marketing sections. Uses useCourses().
+- Built standalone `public/admin.html` — single self-contained HTML file (inline CSS+JS) that controls EVERYTHING by reading/writing the same `waynes-lms` localStorage: Dashboard (KPIs + recent orders + activity), Orders (filter/search/approve/reject/refund + detail modal with timeline + notes + CSV export), Courses (price/comparePrice/featured/published overrides → writes courseOverrides), Coupons (CRUD + toggle + usage bars), Students (derived from orders), Notifications (broadcast), Announcements (CRUD + pin/active), Activity log, Data Tools (export/import/reset). Seeds defaults if localStorage empty. Auto-syncs to store via storage events.
+- Added cross-tab rehydrate listener in providers.tsx (listens for `waynes-lms` storage events → useLms.persist.rehydrate()) so admin.html changes reflect live in any open store tab.
+- Updated navbar "Admin Panel" + auth modal "Admin" demo button to open /admin.html in new tab.
+- Fixed React "Cannot update component while rendering" error in LearnView: moved store setLastViewed call out of render body into a useEffect (local UI state resets stayed as during-render adjustment).
+- Fixed catalog-view useMemo deps (added `courses` to satisfy react-hooks/preserve-manual-memoization).
+- Updated .gitignore: untracked db/*.db, tool-results/, removed .env from tracking.
+- Created GitHub repo `aadarshkumarco-a11y/waynes` (public) via API, committed all, pushed to main. Removed token from remote URL after push.
+
+Verification:
+- Storefront: renders clean, VLM confirms "eCommerce-style storefront... feels shoppable" (product grid, deals, categories, cart).
+- admin.html: renders at /admin.html with all 9 tabs, KPIs, orders table, no errors.
+- Admin→store sync: changed course-1 price to ₹1,234 in admin.html → store catalog shows ₹1,234 (override persisted + rehydrated). ✓
+- Player: "Cannot update component while rendering" error gone (console clean after fix).
+- bun run lint: 0 errors.
+- GitHub push: https://github.com/aadarshkumarco-a11y/waynes (main branch, .env excluded).
+
+Stage Summary:
+- Waynes is now an eCommerce-style course store (not marketing landing).
+- Admin is a standalone /admin.html control panel controlling orders, courses, coupons, students, notifications, announcements, activity, data — all via shared localStorage.
+- All code pushed to GitHub.
