@@ -16,34 +16,33 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Waynes — Learn Skills That Pay Off",
+  title: "Waynes — Master Ethical Hacking",
   description:
-    "Premium digital courses on web development, data science, AI/ML, design & marketing. Learn from world-class instructors and earn verifiable certificates.",
+    "Learn ethical hacking from elite hackers. Web pentesting, bug bounty, AD exploitation, red teaming & more. Real labs, real skills, real careers.",
   keywords: [
-    "online courses",
-    "LMS",
+    "ethical hacking",
+    "pentesting",
+    "bug bounty",
+    "cybersecurity",
+    "OSCP",
+    "Kali Linux",
     "Waynes",
-    "web development",
-    "data science",
-    "AI",
-    "design",
-    "certification",
   ],
   authors: [{ name: "Waynes" }],
   icons: {
     icon: "/logo.svg",
   },
   openGraph: {
-    title: "Waynes — Learn Skills That Pay Off",
+    title: "Waynes — Master Ethical Hacking",
     description:
-      "Premium digital courses taught by world-class instructors. Lifetime access, verifiable certificates.",
+      "Premium ethical hacking courses taught by elite hackers. Real labs, verifiable certificates, career-changing skills.",
     siteName: "Waynes",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Waynes",
-    description: "Premium digital courses taught by world-class instructors.",
+    title: "Waynes — Master Ethical Hacking",
+    description: "Premium ethical hacking courses taught by elite hackers.",
   },
 };
 

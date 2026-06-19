@@ -1,17 +1,29 @@
 "use client";
 
-import { Clock, PlayCircle, Users } from "lucide-react";
+import { Clock, PlayCircle, Users, CheckCircle2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StarRating } from "@/components/lms/star-rating";
 import { useLms } from "@/lib/store";
-import { courseStats } from "@/lib/data/catalog";
+import { courseStats, instructorMap } from "@/lib/data/catalog";
 import { formatDuration, formatNumber, formatPrice } from "@/lib/format";
-import { instructorMap } from "@/lib/data/catalog";
 import type { Course } from "@/lib/types";
 import { cn } from "@/lib/utils";
+
+function levelLabel(level: Course["level"]): string {
+  return level.toLowerCase() === "beginner"
+    ? "BEGINNER"
+    : level.toLowerCase() === "advanced"
+    ? "ADVANCED"
+    : "INTERMEDIATE";
+}
+
+function discountPct(c: Course): number {
+  if (!c.comparePrice || c.comparePrice <= c.price) return 0;
+  return Math.round(((c.comparePrice - c.price) / c.comparePrice) * 100);
+}
 
 export function CourseCard({
   course,
@@ -24,23 +36,28 @@ export function CourseCard({
 }) {
   const openCourse = useLms((s) => s.openCourse);
   const addToCart = useLms((s) => s.addToCart);
+  const isInCart = useLms((s) => s.isInCart);
   const isEnrolled = useLms((s) => s.isEnrolled);
-  const { lessonCount, duration } = courseStats(course);
+
+  const { duration } = courseStats(course);
   const instructor = instructorMap[course.instructorId];
   const enrolled = isEnrolled(course.id);
-  const discount = course.comparePrice
-    ? Math.round(((course.comparePrice - course.price) / course.comparePrice) * 100)
-    : 0;
+  const inCart = isInCart(course.id);
+  const pct = discountPct(course);
+
+  const ctaLabel = enrolled ? "ACCESS" : inCart ? "IN CART ✓" : "ENROLL";
+  const ctaIcon = enrolled ? <CheckCircle2 className="size-3.5" /> : null;
 
   return (
     <motion.div
-      whileHover={{ y: -6 }}
+      whileHover={{ y: -4 }}
       transition={{ type: "spring", stiffness: 300, damping: 24 }}
       className={cn("group h-full", className)}
     >
-      <Card className="relative h-full overflow-hidden p-0 shadow-premium transition-shadow hover:shadow-glow">
+      <Card className="relative flex h-full flex-col overflow-hidden rounded-md border-border/60 bg-card p-0 transition-colors hover:border-primary hover:glow-green">
         {/* Thumbnail */}
         <button
+          type="button"
           onClick={() => openCourse(course.slug)}
           className="relative block w-full overflow-hidden"
           aria-label={`View ${course.title}`}
@@ -51,100 +68,110 @@ export function CourseCard({
               alt={course.title}
               className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-            {course.featured && (
-              <Badge className="absolute left-3 top-3 gap-1 bg-amber-400/90 text-amber-950 hover:bg-amber-400">
-                ★ Featured
+            {/* Dark gradient overlay */}
+            <div className="absolute inset-0 bg-gradient-to-t from-background/95 via-background/30 to-transparent" />
+            {/* Scanlines on hover */}
+            <div className="scanlines absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+
+            {/* Level badge — top-left */}
+            <Badge
+              variant="outline"
+              className="absolute left-2 top-2 border-primary/60 bg-background/70 font-mono text-[10px] uppercase tracking-wider text-primary backdrop-blur"
+            >
+              {levelLabel(course.level)}
+            </Badge>
+
+            {/* Discount badge — top-right */}
+            {pct > 0 && (
+              <Badge className="absolute right-2 top-2 gap-0.5 bg-destructive/90 font-mono text-[10px] font-bold text-white glow-red hover:bg-destructive">
+                -{pct}%
               </Badge>
             )}
-            {discount > 0 && (
-              <Badge className="absolute right-3 top-3 bg-rose-500/90 text-white hover:bg-rose-500">
-                -{discount}%
-              </Badge>
-            )}
-            <div className="absolute inset-0 flex items-center justify-center opacity-0 transition-opacity duration-300 group-hover:opacity-100">
-              <div className="flex size-14 items-center justify-center rounded-full bg-white/90 text-primary shadow-lg backdrop-blur">
-                <PlayCircle className="size-7" />
-              </div>
-            </div>
-            <div className="absolute bottom-3 left-3 flex items-center gap-2 text-xs text-white/90">
-              <span className="flex items-center gap-1 rounded-full bg-black/40 px-2 py-1 backdrop-blur">
-                <Users className="size-3" />
-                {formatNumber(course.studentCount)}
+
+            {/* Play overlay on hover */}
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+              <span className="grid size-12 place-items-center rounded-full border border-primary bg-primary/15 text-primary backdrop-blur glow-green">
+                <PlayCircle className="size-6" />
               </span>
-              <span className="flex items-center gap-1 rounded-full bg-black/40 px-2 py-1 backdrop-blur">
-                <Clock className="size-3" />
-                {formatDuration(duration)}
+              <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-primary text-glow-green">
+                Initiate
               </span>
             </div>
           </div>
         </button>
 
         {/* Body */}
-        <div className="flex flex-col gap-3 p-4">
-          <div className="flex items-center gap-2">
-            <Badge variant="secondary" className="font-medium">
-              {course.level.charAt(0) + course.level.slice(1).toLowerCase()}
-            </Badge>
-            <span className="text-xs text-muted-foreground">{lessonCount} lessons</span>
-          </div>
-
+        <div className="flex flex-1 flex-col gap-2.5 p-3.5">
+          {/* Title */}
           <button
+            type="button"
             onClick={() => openCourse(course.slug)}
-            className="text-left text-base font-semibold leading-snug tracking-tight line-clamp-2 transition-colors hover:text-primary"
+            className="text-left font-mono text-sm font-bold leading-snug tracking-tight line-clamp-2 transition-colors hover:text-primary"
           >
             {course.title}
           </button>
 
-          {!compact && (
-            <p className="text-sm text-muted-foreground line-clamp-2">{course.subtitle}</p>
-          )}
-
           {/* Instructor */}
           {instructor && (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
               <img
                 src={instructor.avatar}
                 alt={instructor.name}
-                className="size-6 rounded-full object-cover"
+                className="size-4 rounded-full border border-primary/30 object-cover"
               />
-              <span className="text-xs text-muted-foreground">{instructor.name}</span>
+              <span className="font-mono text-[11px] text-muted-foreground">
+                {instructor.name}
+              </span>
             </div>
           )}
 
           {/* Rating */}
-          <div className="flex items-center justify-between">
-            <StarRating rating={course.rating} count={course.reviewCount} showValue />
-          </div>
+          <StarRating rating={course.rating} size={11} showValue count={course.reviewCount} />
 
           {/* Price + CTA */}
-          <div className="mt-1 flex items-end justify-between gap-2 border-t pt-3">
+          <div className="mt-auto flex items-end justify-between gap-2 border-t border-primary/15 pt-2.5">
             <div className="flex flex-col">
-              <span className="text-lg font-bold tracking-tight">
+              <span className="font-mono text-base font-bold transition-all group-hover:text-primary group-hover:text-glow-green">
                 {formatPrice(course.price, course.currency)}
               </span>
               {course.comparePrice && (
-                <span className="text-xs text-muted-foreground line-through">
+                <span className="font-mono text-[11px] text-muted-foreground line-through">
                   {formatPrice(course.comparePrice, course.currency)}
                 </span>
               )}
             </div>
-            {enrolled ? (
-              <Button size="sm" variant="outline" onClick={() => openCourse(course.slug)}>
-                Go to Course
-              </Button>
-            ) : (
-              <Button
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  addToCart(course.id);
-                }}
-              >
-                Add to Cart
-              </Button>
-            )}
+            <Button
+              size="sm"
+              variant={inCart ? "secondary" : "default"}
+              disabled={enrolled || inCart}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (!enrolled && !inCart) addToCart(course.id);
+              }}
+              className={cn(
+                "gap-1 rounded-none font-mono text-[11px] uppercase tracking-wider",
+                enrolled && "border-primary/40 bg-primary/10 text-primary hover:bg-primary/10"
+              )}
+              aria-label={`${ctaLabel} — ${course.title}`}
+            >
+              {ctaIcon}
+              {ctaLabel}
+            </Button>
           </div>
+
+          {/* Bottom stats — hidden when compact */}
+          {!compact && (
+            <div className="flex items-center gap-3 font-mono text-[10px] text-muted-foreground">
+              <span className="flex items-center gap-1">
+                <Users className="size-3" />
+                {formatNumber(course.studentCount)}
+              </span>
+              <span className="flex items-center gap-1">
+                <Clock className="size-3" />
+                {formatDuration(duration)}
+              </span>
+            </div>
+          )}
         </div>
       </Card>
     </motion.div>

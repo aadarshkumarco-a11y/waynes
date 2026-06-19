@@ -6,19 +6,21 @@ import {
   ArrowLeft,
   ArrowRight,
   Award,
-  BadgeCheck,
   Check,
   CheckCircle2,
-  Clock,
   Copy,
   CreditCard,
+  Infinity as InfinityIcon,
+  KeyRound,
   Lock,
   PlayCircle,
-  RefreshCw,
   ShieldCheck,
+  Skull,
   Sparkles,
   Tag,
+  Terminal,
   X,
+  Zap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -30,7 +32,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useLms } from "@/lib/store";
 import { courseMap, instructorMap } from "@/lib/data/catalog";
-import { formatPrice, formatDateTime, formatDuration } from "@/lib/format";
+import { formatPrice } from "@/lib/format";
 import type { Course, Order } from "@/lib/types";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -59,10 +61,50 @@ const PAYMENT_METHODS = [
 ] as const;
 
 const TRUST_BADGES = [
-  { label: "Lifetime access", icon: BadgeCheck },
+  { label: "Lifetime access", icon: InfinityIcon },
   { label: "Verifiable certificate", icon: Award },
-  { label: "7-day money-back", icon: ShieldCheck },
+  { label: "30-day refund", icon: ShieldCheck },
 ] as const;
+
+// ---------------------------------------------------------------------------
+// Empty state — no target selected
+// ---------------------------------------------------------------------------
+function EmptyCheckoutState() {
+  const navigate = useLms((s) => s.navigate);
+  return (
+    <div className="relative mx-auto flex min-h-[70vh] w-full max-w-2xl flex-col items-center justify-center px-4 py-16 text-center">
+      <div className="pointer-events-none absolute inset-0 -z-10 bg-grid opacity-30" />
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.4 }}
+        className="terminal-window px-8 py-12"
+      >
+        <div className="mb-4 flex size-16 items-center justify-center rounded-full border border-amber-500/40 bg-amber-500/5 text-amber-500">
+          <Skull className="size-9" />
+        </div>
+        <p className="font-mono text-xs uppercase tracking-widest text-amber-500">
+          error: null_target
+        </p>
+        <h1 className="mt-2 text-2xl font-bold tracking-tight text-glow-green sm:text-3xl">
+          NO TARGET SELECTED
+        </h1>
+        <p className="mt-3 max-w-md font-mono text-sm text-muted-foreground">
+          <span className="text-amber-500">$</span> no course loaded into the
+          checkout buffer. select a target from the catalog to begin the payment
+          sequence.
+        </p>
+        <Button
+          className="mt-6 gap-2 font-mono uppercase tracking-widest glow-green"
+          onClick={() => navigate("catalog")}
+        >
+          <Terminal className="size-4" />
+          &gt; browse_catalog
+        </Button>
+      </motion.div>
+    </div>
+  );
+}
 
 export function CheckoutView() {
   const checkoutCourseId = useLms((s) => s.checkoutCourseId);
@@ -73,13 +115,15 @@ export function CheckoutView() {
 
   if (!course) return <EmptyCheckoutState />;
 
-  // Keyed inner form so local state (txn ref, coupon input, etc.) resets
-  // automatically when the course being checked out changes.
+  // Keyed inner form so local state resets when course changes.
   return <CheckoutForm key={course.id} course={course} />;
 }
 
 export default CheckoutView;
 
+// ---------------------------------------------------------------------------
+// Inner form — owns all checkout state
+// ---------------------------------------------------------------------------
 function CheckoutForm({ course }: { course: Course }) {
   const user = useLms((s) => s.user);
   const setAuthOpen = useLms((s) => s.setAuthOpen);
@@ -110,7 +154,7 @@ function CheckoutForm({ course }: { course: Course }) {
   const instructor = instructorMap[course.instructorId];
   const enrolled = isEnrolled(course.id);
 
-  // ---- Coupon ----
+  // ---- Coupon math ----
   const couponResult = appliedCouponCode
     ? validateCoupon(appliedCouponCode, course.price, course.id)
     : null;
@@ -123,7 +167,7 @@ function CheckoutForm({ course }: { course: Course }) {
       setCouponMsg({ ok: false, text: "Enter a coupon code." });
       return;
     }
-    const res = applyCoupon(raw, course!.price, course!.id);
+    const res = applyCoupon(raw, course.price, course.id);
     setCouponMsg({
       ok: res.ok,
       text: res.message,
@@ -142,7 +186,7 @@ function CheckoutForm({ course }: { course: Course }) {
     if (typeof navigator !== "undefined" && navigator.clipboard) {
       navigator.clipboard.writeText(UPI_ID).then(() => {
         setCopied(true);
-        toast.success("UPI ID copied");
+        toast.success("UPI ID copied to clipboard");
         setTimeout(() => setCopied(false), 1800);
       });
     }
@@ -151,16 +195,15 @@ function CheckoutForm({ course }: { course: Course }) {
   function handlePlaceOrder() {
     setTouched(true);
     if (!txnRef.trim()) {
-      toast.error("Please enter your transaction reference (UTR ID).");
+      toast.error("Enter your transaction reference (UTR ID).");
       return;
     }
     setSubmitting(true);
-    // Simulate a tiny delay for UX.
     setTimeout(() => {
-      const order = checkout(course!.id, txnRef.trim(), paymentMethod);
+      const order = checkout(course.id, txnRef.trim(), paymentMethod);
       setPlacedOrder(order);
       setSubmitting(false);
-      toast.success("Order submitted for verification");
+      toast.success("Payment submitted for verification");
     }, 600);
   }
 
@@ -174,42 +217,54 @@ function CheckoutForm({ course }: { course: Course }) {
         transition={{ duration: 0.4 }}
         className="mx-auto max-w-3xl px-4 py-12 sm:py-16"
       >
-        <Card className="glass-strong overflow-hidden p-0 shadow-premium">
-          <div className="gradient-brand relative px-6 py-10 text-center sm:px-12">
-            <div className="absolute inset-0 bg-grid opacity-20" />
+        <Card className="terminal-window overflow-hidden p-0">
+          <div className="relative border-b border-primary/20 bg-primary/10 px-6 py-10 text-center sm:px-12">
+            <div className="absolute inset-0 bg-grid opacity-30" />
             <div className="relative">
-              <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-full bg-white/15 backdrop-blur">
-                <CheckCircle2 className="size-9 text-white" />
+              <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-full border border-primary/40 bg-primary/10 text-primary glow-green">
+                <CheckCircle2 className="size-9" />
               </div>
-              <h2 className="text-2xl font-bold text-white sm:text-3xl">
-                You&apos;re already enrolled!
+              <p className="font-mono text-xs uppercase tracking-widest text-primary">
+                $ access_granted
+              </p>
+              <h2 className="mt-2 text-2xl font-bold tracking-tight text-glow-green sm:text-3xl">
+                ACCESS ALREADY GRANTED
               </h2>
-              <p className="mt-2 text-white/90">{course.title}</p>
+              <p className="mt-2 font-mono text-sm text-muted-foreground">
+                {course.title}
+              </p>
             </div>
           </div>
           <div className="p-6 sm:p-8">
-            <p className="text-center text-muted-foreground">
+            <p className="text-center font-mono text-sm text-muted-foreground">
               {enr?.completed
-                ? "You've completed this course. Continue reviewing or grab your certificate."
-                : `Pick up where you left off — ${enr?.progress ?? 0}% complete.`}
+                ? "> course completed — review or claim certificate"
+                : `> resume session — ${enr?.progress ?? 0}% complete`}
             </p>
             <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
               <Button
                 size="lg"
                 onClick={() => openLesson(course.slug, enr?.lastViewedLessonId ?? "")}
+                className="glow-green gap-2 font-mono uppercase tracking-widest"
               >
                 <PlayCircle className="size-4" />
-                {enr?.completed ? "Review course" : "Continue learning"}
+                Continue Learning
+                <ArrowRight className="size-4" />
               </Button>
-              <Button size="lg" variant="outline" onClick={() => openCourse(course.slug)}>
-                View course details
+              <Button
+                size="lg"
+                variant="outline"
+                onClick={() => openCourse(course.slug)}
+                className="border-primary/30 font-mono uppercase tracking-widest text-primary"
+              >
+                View Course
               </Button>
             </div>
             <button
               onClick={() => navigate("catalog")}
-              className="mt-6 block w-full text-center text-sm text-muted-foreground transition-colors hover:text-primary"
+              className="mt-6 block w-full text-center font-mono text-sm text-muted-foreground transition-colors hover:text-primary"
             >
-              Browse other courses →
+              &gt; browse other targets
             </button>
           </div>
         </Card>
@@ -237,15 +292,29 @@ function CheckoutForm({ course }: { course: Course }) {
       <div className="mb-8">
         <button
           onClick={() => openCourse(course.slug)}
-          className="mb-4 inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-primary"
+          className="mb-4 inline-flex items-center gap-1.5 font-mono text-sm text-muted-foreground transition-colors hover:text-primary"
         >
           <ArrowLeft className="size-4" />
-          Back to course
+          &lt; back_to_target
         </button>
-        <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">Checkout</h1>
-        <p className="mt-1 text-muted-foreground">
-          Complete your enrollment in{" "}
-          <span className="font-medium text-foreground">{course.title}</span>
+        <div className="flex items-center gap-3">
+          <Badge
+            variant="outline"
+            className="border-primary/40 bg-primary/5 font-mono text-xs uppercase tracking-widest text-primary"
+          >
+            <Terminal className="size-3" />
+            payment_terminal
+          </Badge>
+        </div>
+        <h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">
+          <span className="text-primary text-glow-green">&gt;</span>{" "}
+          <span className="text-gradient-brand">SECURE_CHECKOUT</span>
+          <span className="cursor-blink" />
+        </h1>
+        <p className="mt-1 font-mono text-sm text-muted-foreground">
+          <span className="text-primary">$</span> initiating payment sequence
+          for{" "}
+          <span className="font-semibold text-foreground">{course.title}</span>
         </p>
       </div>
 
@@ -255,307 +324,362 @@ function CheckoutForm({ course }: { course: Course }) {
           {/* Sign-in prompt */}
           {!user && (
             <Alert className="border-amber-500/40 bg-amber-500/10 text-amber-900 dark:text-amber-100">
-              <RefreshCw className="size-4" />
-              <AlertTitle>Sign in to save your progress</AlertTitle>
+              <KeyRound className="size-4" />
+              <AlertTitle className="font-mono uppercase tracking-widest">
+                &gt; auth_required
+              </AlertTitle>
               <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <span>
-                  You can place an order as a guest, but signing in lets us track your
-                  enrollment &amp; issue certificates.
+                <span className="font-mono text-sm">
+                  Sign in to save your progress &amp; receive certificates. Guest
+                  orders are accepted but not recommended.
                 </span>
-                <Button size="sm" onClick={() => setAuthOpen(true, "login")}>
-                  Sign in
+                <Button
+                  size="sm"
+                  onClick={() => setAuthOpen(true, "login")}
+                  className="font-mono uppercase tracking-widest"
+                >
+                  Authenticate
                 </Button>
               </AlertDescription>
             </Alert>
           )}
 
           {/* Coupon */}
-          <Card className="glass p-5 shadow-premium sm:p-6">
-            <div className="mb-4 flex items-center gap-2">
-              <Tag className="size-5 text-primary" />
-              <h2 className="text-lg font-semibold">Have a coupon?</h2>
+          <Card className="terminal-window p-5 sm:p-6">
+            <div className="mb-4 flex items-center gap-2 border-b border-primary/15 pb-3">
+              <Tag className="size-4 text-primary" />
+              <h2 className="font-mono text-sm font-semibold uppercase tracking-widest text-primary">
+                {"// coupon_module"}
+              </h2>
             </div>
 
             {appliedCouponCode ? (
-              <div className="flex items-center justify-between gap-3 rounded-lg border border-primary/30 bg-primary/5 p-3">
+              <div className="flex items-center justify-between gap-3 rounded-md border border-primary/30 bg-primary/5 p-3">
                 <div className="flex items-center gap-2">
-                  <BadgeCheck className="size-5 text-primary" />
+                  <CheckCircle2 className="size-5 text-primary" />
                   <div>
-                    <p className="text-sm font-semibold">{appliedCouponCode}</p>
-                    <p className="text-xs text-muted-foreground">
-                      You saved {formatPrice(discount)}
+                    <p className="font-mono text-sm font-semibold text-primary">
+                      {appliedCouponCode}
+                    </p>
+                    <p className="font-mono text-xs text-muted-foreground">
+                      <span className="text-primary">SAVED</span>{" "}
+                      {formatPrice(discount)}
                     </p>
                   </div>
                 </div>
-                <Button size="sm" variant="ghost" onClick={handleRemoveCoupon}>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={handleRemoveCoupon}
+                  className="font-mono text-destructive hover:bg-destructive/10 hover:text-destructive"
+                >
                   <X className="size-4" />
-                  Remove
+                  REMOVE
                 </Button>
               </div>
             ) : (
               <>
                 <div className="flex flex-col gap-2 sm:flex-row">
-                  <Input
-                    value={couponInput}
-                    onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
-                    placeholder="ENTER CODE"
-                    className="font-mono tracking-wider uppercase"
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") handleApplyCoupon();
-                    }}
-                  />
-                  <Button onClick={handleApplyCoupon} className="sm:w-32">
-                    Apply
+                  <div className="relative flex-1">
+                    <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 font-mono text-sm text-primary">
+                      &gt;
+                    </span>
+                    <Input
+                      value={couponInput}
+                      onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
+                      placeholder="ENTER_CODE"
+                      aria-label="Coupon code"
+                      className="border-primary/30 bg-background/50 pl-7 font-mono tracking-wider uppercase placeholder:text-muted-foreground/60"
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") handleApplyCoupon();
+                      }}
+                    />
+                  </div>
+                  <Button
+                    onClick={() => handleApplyCoupon()}
+                    className="glow-green gap-2 font-mono uppercase tracking-widest sm:w-32"
+                  >
+                    <Zap className="size-4" />
+                    APPLY
                   </Button>
                 </div>
                 {couponMsg && (
                   <p
                     className={cn(
-                      "mt-2 text-sm",
+                      "mt-2 font-mono text-sm",
                       couponMsg.ok ? "text-primary" : "text-destructive"
                     )}
                   >
-                    {couponMsg.text}
+                    <span className={couponMsg.ok ? "text-primary" : "text-destructive"}>
+                      {couponMsg.ok ? "$" : "!"}
+                    </span>{" "}
+                    {couponMsg.ok && couponMsg.discount
+                      ? `SAVED ${formatPrice(couponMsg.discount)} — ${couponMsg.text}`
+                      : couponMsg.text}
                   </p>
                 )}
                 <button
-                  onClick={() => {
-                    setCouponInput("WELCOME50");
-                    handleApplyCoupon("WELCOME50");
-                  }}
-                  className="mt-3 inline-flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-primary"
+                  onClick={() => handleApplyCoupon("HACK50")}
+                  className="mt-3 inline-flex items-center gap-1 font-mono text-xs text-muted-foreground transition-colors hover:text-primary"
                 >
-                  <Sparkles className="size-3" />
-                  Try <span className="font-mono font-semibold">WELCOME50</span> for 50%
-                  off
+                  <Sparkles className="size-3 text-primary" />
+                  <span className="text-muted-foreground">try</span>{" "}
+                  <span className="font-semibold text-primary">HACK50</span>{" "}
+                  <span className="text-muted-foreground">for 50% off</span>
                 </button>
               </>
             )}
           </Card>
 
           {/* Payment */}
-          <Card className="glass p-5 shadow-premium sm:p-6">
-            <div className="mb-4 flex items-center gap-2">
-              <CreditCard className="size-5 text-primary" />
-              <h2 className="text-lg font-semibold">Payment</h2>
+          <Card className="terminal-window p-5 sm:p-6">
+            <div className="mb-4 flex items-center gap-2 border-b border-primary/15 pb-3">
+              <CreditCard className="size-4 text-primary" />
+              <h2 className="font-mono text-sm font-semibold uppercase tracking-widest text-primary">
+                {"// payment_gateway"}
+              </h2>
             </div>
 
             {/* UPI box */}
-            <div className="mb-5 rounded-lg border border-primary/30 bg-primary/5 p-4">
-              <p className="text-sm text-muted-foreground">
-                Make payment to the UPI ID below, then enter your transaction reference.
+            <div className="mb-5 rounded-md border border-primary/30 bg-primary/5 p-4">
+              <p className="font-mono text-sm text-muted-foreground">
+                <span className="text-primary">$</span> make payment to UPI:{" "}
+                <span className="font-semibold text-foreground">waynes@upi</span>,
+                then enter your transaction reference below.
               </p>
-              <div className="mt-3 flex items-center justify-between gap-3 rounded-md bg-background/80 px-3 py-2.5 backdrop-blur">
+              <div className="mt-3 flex items-center justify-between gap-3 rounded-md border border-primary/20 bg-background/80 px-3 py-2.5 backdrop-blur">
                 <div>
-                  <p className="text-xs text-muted-foreground">Pay to UPI ID</p>
-                  <p className="font-mono text-base font-semibold tracking-wide">
+                  <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                    pay_to_upi
+                  </p>
+                  <p className="font-mono text-base font-semibold tracking-wide text-primary text-glow-green">
                     {UPI_ID}
                   </p>
                 </div>
-                <Button size="sm" variant="outline" onClick={handleCopyUpi}>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleCopyUpi}
+                  className="border-primary/30 font-mono text-xs uppercase tracking-widest text-primary"
+                >
                   {copied ? (
                     <>
-                      <Check className="size-4" /> Copied
+                      <Check className="size-4" /> COPIED
                     </>
                   ) : (
                     <>
-                      <Copy className="size-4" /> Copy
+                      <Copy className="size-4" /> COPY
                     </>
                   )}
                 </Button>
               </div>
-              <p className="mt-3 flex items-start gap-2 text-xs text-muted-foreground">
-                <Clock className="mt-0.5 size-3.5 shrink-0" />
-                Our team verifies your transaction and grants access — usually within a
-                few minutes during business hours.
+            </div>
+
+            {/* Payment methods */}
+            <div className="mb-5">
+              <Label className="mb-2 block font-mono text-xs uppercase tracking-widest text-muted-foreground">
+                {"// payment_method"}
+              </Label>
+              <RadioGroup
+                value={paymentMethod}
+                onValueChange={setPaymentMethod}
+                className="grid grid-cols-1 gap-2 sm:grid-cols-3"
+              >
+                {PAYMENT_METHODS.map((m) => (
+                  <Label
+                    key={m.id}
+                    htmlFor={`pm-${m.id}`}
+                    className={cn(
+                      "flex cursor-pointer flex-col gap-1 rounded-md border p-3 transition-colors",
+                      paymentMethod === m.id
+                        ? "border-primary bg-primary/10 glow-green"
+                        : "border-primary/20 hover:border-primary/40 hover:bg-primary/5"
+                    )}
+                  >
+                    <div className="flex items-center gap-2">
+                      <RadioGroupItem
+                        id={`pm-${m.id}`}
+                        value={m.id}
+                        className="border-primary/40 text-primary"
+                      />
+                      <span className="text-lg">{m.icon}</span>
+                      <span className="font-mono text-sm font-semibold">
+                        {m.label}
+                      </span>
+                    </div>
+                    <span className="font-mono text-[11px] text-muted-foreground">
+                      {m.description}
+                    </span>
+                  </Label>
+                ))}
+              </RadioGroup>
+              <p className="mt-2 font-mono text-[11px] text-muted-foreground">
+                <Lock className="mr-1 inline size-3 text-primary" />
+                info only — no card details stored. verification is manual.
               </p>
             </div>
 
-            {/* Payment method */}
-            <Label className="mb-2 block text-sm font-medium">Payment method</Label>
-            <RadioGroup
-              value={paymentMethod}
-              onValueChange={setPaymentMethod}
-              className="grid gap-2 sm:grid-cols-3"
-            >
-              {PAYMENT_METHODS.map((m) => (
-                <label
-                  key={m.id}
-                  htmlFor={`pm-${m.id}`}
-                  className={cn(
-                    "flex cursor-pointer items-start gap-2 rounded-lg border p-3 transition-colors hover:bg-accent/40",
-                    paymentMethod === m.id && "border-primary bg-primary/5"
-                  )}
-                >
-                  <RadioGroupItem value={m.id} id={`pm-${m.id}`} className="mt-0.5" />
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold">
-                      <span className="mr-1">{m.icon}</span>
-                      {m.label}
-                    </p>
-                    <p className="text-xs text-muted-foreground">{m.description}</p>
-                  </div>
-                </label>
-              ))}
-            </RadioGroup>
-
-            {/* Transaction reference */}
-            <div className="mt-5">
-              <Label htmlFor="txn" className="mb-1.5 block text-sm font-medium">
-                Transaction Reference / UTR ID <span className="text-destructive">*</span>
+            {/* UTR / Transaction Reference */}
+            <div>
+              <Label
+                htmlFor="txn-ref"
+                className="mb-2 block font-mono text-xs uppercase tracking-widest text-muted-foreground"
+              >
+                {"// transaction_reference (UTR)"}
+                <span className="ml-1 text-destructive">*</span>
               </Label>
-              <Input
-                id="txn"
-                value={txnRef}
-                onChange={(e) => setTxnRef(e.target.value)}
-                placeholder="e.g. 452103689712"
-                className={cn(txnError && "border-destructive focus-visible:ring-destructive/30")}
-                aria-invalid={txnError}
-              />
+              <div className="relative">
+                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 font-mono text-sm text-primary">
+                  &gt;
+                </span>
+                <Input
+                  id="txn-ref"
+                  value={txnRef}
+                  onChange={(e) => setTxnRef(e.target.value)}
+                  placeholder="e.g. 4528193765432"
+                  aria-invalid={txnError}
+                  aria-describedby={txnError ? "txn-error" : undefined}
+                  className={cn(
+                    "border-primary/30 bg-background/50 pl-7 font-mono tracking-wide placeholder:text-muted-foreground/60",
+                    txnError && "border-destructive glow-red"
+                  )}
+                />
+              </div>
               {txnError && (
-                <p className="mt-1.5 text-xs text-destructive">
-                  Transaction reference is required to verify your payment.
+                <p
+                  id="txn-error"
+                  className="mt-1.5 font-mono text-xs text-destructive"
+                >
+                  <span>!</span> transaction reference is required to execute
+                  payment
                 </p>
               )}
-              <p className="mt-1.5 text-xs text-muted-foreground">
-                Found in your UPI app&apos;s payment receipt, or your bank statement.
-              </p>
             </div>
 
+            {/* Execute button */}
             <Button
               size="lg"
-              className="mt-6 w-full"
               onClick={handlePlaceOrder}
               disabled={submitting}
+              className="glow-green mt-5 w-full gap-2 font-mono uppercase tracking-widest"
             >
               {submitting ? (
                 <>
-                  <RefreshCw className="size-4 animate-spin" />
-                  Submitting…
+                  <Terminal className="size-4 animate-pulse" />
+                  EXECUTING…
                 </>
               ) : (
                 <>
-                  <Lock className="size-4" />
-                  Place Order · {formatPrice(finalAmount, course.currency)}
+                  <Zap className="size-4" />
+                  EXECUTE PAYMENT
+                  <ArrowRight className="size-4" />
                 </>
               )}
             </Button>
-            <p className="mt-3 flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
-              <ShieldCheck className="size-3.5" />
-              Secured by external payment verification · No card details stored
-            </p>
           </Card>
         </div>
 
         {/* RIGHT — Order summary (sticky) */}
-        <div className="lg:sticky lg:top-24 lg:self-start">
-          <Card className="glass-strong overflow-hidden p-0 shadow-premium">
-            <div className="border-b p-4">
-              <h2 className="text-base font-semibold">Order summary</h2>
-            </div>
-            <div className="flex gap-3 p-4">
-              <div className="relative size-20 shrink-0 overflow-hidden rounded-lg bg-muted">
-                <img
-                  src={course.thumbnail}
-                  alt={course.title}
-                  className="absolute inset-0 h-full w-full object-cover"
-                />
+        <div className="lg:block">
+          <div className="lg:sticky lg:top-24">
+            <Card className="terminal-window overflow-hidden">
+              {/* Window header */}
+              <div className="flex items-center gap-2 border-b border-primary/15 bg-primary/5 px-4 py-2">
+                <div className="flex gap-1.5">
+                  <span className="size-2.5 rounded-full bg-destructive/70" />
+                  <span className="size-2.5 rounded-full bg-amber-500/70" />
+                  <span className="size-2.5 rounded-full bg-primary/70" />
+                </div>
+                <span className="ml-2 font-mono text-[11px] uppercase tracking-widest text-primary/80">
+                  order_summary.txt
+                </span>
               </div>
-              <div className="min-w-0 flex-1">
-                <p className="line-clamp-2 text-sm font-semibold leading-snug">
-                  {course.title}
-                </p>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  by {instructor?.name}
-                </p>
-                <div className="mt-1.5 flex items-center gap-2 text-xs text-muted-foreground">
-                  <Badge variant="secondary" className="font-medium">
-                    {course.level.charAt(0) + course.level.slice(1).toLowerCase()}
-                  </Badge>
-                  <span className="flex items-center gap-1">
-                    <Clock className="size-3" />
-                    {formatDuration(course.durationMins)}
+
+              {/* Course thumbnail + title */}
+              <div className="flex gap-3 border-b border-primary/15 p-4">
+                <div className="relative size-16 shrink-0 overflow-hidden rounded-md bg-muted">
+                  <img
+                    src={course.thumbnail}
+                    alt={course.title}
+                    className="absolute inset-0 h-full w-full object-cover"
+                  />
+                  <div className="scanlines pointer-events-none absolute inset-0" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="line-clamp-2 font-mono text-sm font-semibold text-foreground">
+                    {course.title}
+                  </p>
+                  {instructor && (
+                    <p className="mt-0.5 font-mono text-xs text-muted-foreground">
+                      <span className="text-primary">@</span> {instructor.name}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Price breakdown */}
+              <div className="flex flex-col gap-2 p-4 font-mono text-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">original_price</span>
+                  <span className="text-foreground">
+                    {formatPrice(course.price, course.currency)}
+                  </span>
+                </div>
+                {discount > 0 && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-primary">discount</span>
+                    <span className="text-primary">
+                      -{formatPrice(discount, course.currency)}
+                    </span>
+                  </div>
+                )}
+                {appliedCouponCode && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">coupon</span>
+                    <span className="text-primary">{appliedCouponCode}</span>
+                  </div>
+                )}
+                <Separator className="my-1 bg-primary/15" />
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold uppercase tracking-widest">
+                    total
+                  </span>
+                  <span className="text-xl font-bold text-primary text-glow-green">
+                    {formatPrice(finalAmount, course.currency)}
                   </span>
                 </div>
               </div>
-            </div>
 
-            <Separator />
+              {/* Trust badges */}
+              <div className="border-t border-primary/15 p-4">
+                <div className="grid grid-cols-1 gap-2">
+                  {TRUST_BADGES.map((b) => {
+                    const Icon = b.icon;
+                    return (
+                      <div
+                        key={b.label}
+                        className="flex items-center gap-2 font-mono text-xs text-muted-foreground"
+                      >
+                        <Icon className="size-3.5 text-primary" />
+                        <span className="uppercase tracking-widest">{b.label}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
 
-            <div className="space-y-2 p-4 text-sm">
-              <Row label="Original price">
-                {course.comparePrice ? (
-                  <span className="text-muted-foreground line-through">
-                    {formatPrice(course.comparePrice, course.currency)}
+              {/* Footer note */}
+              <div className="border-t border-primary/15 bg-primary/5 px-4 py-3">
+                <p className="flex items-center gap-1.5 font-mono text-[11px] text-muted-foreground">
+                  <ShieldCheck className="size-3.5 text-primary" />
+                  <span>
+                    <span className="text-primary">$</span> payment verified
+                    manually within minutes
                   </span>
-                ) : (
-                  formatPrice(course.price, course.currency)
-                )}
-              </Row>
-              {course.comparePrice ? (
-                <Row label="Course discount">
-                  <span className="text-primary">
-                    −
-                    {formatPrice(
-                      course.comparePrice - course.price,
-                      course.currency
-                    )}
-                  </span>
-                </Row>
-              ) : null}
-              {discount > 0 && (
-                <Row label={`Coupon (${appliedCouponCode})`}>
-                  <span className="text-primary">−{formatPrice(discount, course.currency)}</span>
-                </Row>
-              )}
-            </div>
-
-            <Separator />
-
-            <div className="p-4">
-              <Row label="Total" bold>
-                <span className="text-xl font-bold tracking-tight">
-                  {formatPrice(finalAmount, course.currency)}
-                </span>
-              </Row>
-              {course.comparePrice && (
-                <p className="mt-1 text-xs text-muted-foreground">
-                  You save{" "}
-                  <span className="font-semibold text-primary">
-                    {formatPrice(
-                      (course.comparePrice || 0) - finalAmount,
-                      course.currency
-                    )}
-                  </span>{" "}
-                  ({Math.round(
-                    (((course.comparePrice || 0) - finalAmount) /
-                      (course.comparePrice || 1)) *
-                      100
-                  )}
-                  % off)
                 </p>
-              )}
-            </div>
-
-            <Separator />
-
-            <div className="grid grid-cols-1 gap-2 p-4 sm:grid-cols-3">
-              {TRUST_BADGES.map((b) => {
-                const Icon = b.icon;
-                return (
-                  <div
-                    key={b.label}
-                    className="flex flex-col items-center gap-1 rounded-md bg-muted/40 p-2 text-center"
-                  >
-                    <Icon className="size-4 text-primary" />
-                    <span className="text-[11px] font-medium leading-tight text-muted-foreground">
-                      {b.label}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          </Card>
+              </div>
+            </Card>
+          </div>
         </div>
       </div>
     </div>
@@ -563,52 +687,8 @@ function CheckoutForm({ course }: { course: Course }) {
 }
 
 // ---------------------------------------------------------------------------
-// HELPERS
+// Success screen — terminal output style
 // ---------------------------------------------------------------------------
-
-function Row({
-  label,
-  children,
-  bold,
-}: {
-  label: string;
-  children: React.ReactNode;
-  bold?: boolean;
-}) {
-  return (
-    <div className="flex items-center justify-between gap-3">
-      <span className={cn(bold ? "font-semibold" : "text-muted-foreground")}>
-        {label}
-      </span>
-      <span>{children}</span>
-    </div>
-  );
-}
-
-function EmptyCheckoutState() {
-  const navigate = useLms((s) => s.navigate);
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4 }}
-      className="mx-auto flex max-w-xl flex-col items-center px-4 py-20 text-center"
-    >
-      <div className="mb-5 flex size-20 items-center justify-center rounded-full bg-muted">
-        <CreditCard className="size-10 text-muted-foreground" />
-      </div>
-      <h2 className="text-2xl font-bold tracking-tight">No course selected</h2>
-      <p className="mt-2 text-muted-foreground">
-        Browse our catalog and pick a course to start the checkout process.
-      </p>
-      <Button className="mt-6" size="lg" onClick={() => navigate("catalog")}>
-        Browse courses
-        <ArrowRight className="size-4" />
-      </Button>
-    </motion.div>
-  );
-}
-
 function SuccessScreen({
   order,
   onContinue,
@@ -619,124 +699,128 @@ function SuccessScreen({
   onBack: () => void;
 }) {
   const steps = [
-    {
-      title: "We verify your payment",
-      body: "Our team cross-checks your UTR with the payment we received.",
-    },
-    {
-      title: "Access is granted",
-      body: "Once approved, you'll be enrolled instantly and notified.",
-    },
-    {
-      title: "Start learning",
-      body: "Dive into lessons, track progress, and earn your certificate.",
-    },
+    { n: "01", label: "We verify your payment", icon: ShieldCheck },
+    { n: "02", label: "Access granted within minutes", icon: KeyRound },
+    { n: "03", label: "Start hacking", icon: Terminal },
   ];
 
   return (
     <div className="relative mx-auto max-w-2xl px-4 py-12 sm:py-16">
-      <div className="absolute inset-x-0 top-0 -z-10 h-96 bg-grid opacity-30 [mask-image:linear-gradient(to_bottom,black,transparent)]" />
+      <div className="pointer-events-none absolute inset-0 -z-10 bg-grid opacity-30" />
       <AnimatePresence mode="wait">
         <motion.div
           key="success"
-          initial={{ opacity: 0, scale: 0.95, y: 20 }}
+          initial={{ opacity: 0, scale: 0.95, y: 12 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
-          transition={{ type: "spring", stiffness: 220, damping: 22 }}
+          transition={{ duration: 0.4 }}
         >
-          <Card className="glass-strong overflow-hidden p-0 shadow-glow">
-            <div className="gradient-brand relative px-6 py-10 text-center sm:px-12">
-              <div className="absolute inset-0 bg-grid opacity-20" />
-              <motion.div
-                initial={{ scale: 0, rotate: -30 }}
-                animate={{ scale: 1, rotate: 0 }}
-                transition={{ type: "spring", stiffness: 200, damping: 14, delay: 0.2 }}
-                className="relative mx-auto mb-4 flex size-20 items-center justify-center rounded-full bg-white/15 backdrop-blur"
-              >
-                <CheckCircle2 className="size-12 text-white" />
-              </motion.div>
-              <motion.h2
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.35 }}
-                className="relative text-2xl font-bold text-white sm:text-3xl"
-              >
-                Order submitted for verification
-              </motion.h2>
-              <motion.p
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.45 }}
-                className="relative mt-2 text-white/90"
-              >
-                Order <span className="font-mono">{order.orderNumber}</span>
-              </motion.p>
+          <Card className="terminal-window overflow-hidden">
+            {/* Window header */}
+            <div className="flex items-center gap-2 border-b border-primary/15 bg-primary/5 px-4 py-2">
+              <div className="flex gap-1.5">
+                <span className="size-2.5 rounded-full bg-destructive/70" />
+                <span className="size-2.5 rounded-full bg-amber-500/70" />
+                <span className="size-2.5 rounded-full bg-primary/70" />
+              </div>
+              <span className="ml-2 font-mono text-[11px] uppercase tracking-widest text-primary/80">
+                payment_terminal — output
+              </span>
+            </div>
+
+            {/* Terminal output */}
+            <div className="p-6 sm:p-8">
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                transition={{ delay: 0.55 }}
-                className="relative mt-3 inline-flex items-center gap-1.5 rounded-full bg-amber-400/90 px-3 py-1 text-xs font-semibold text-amber-950"
+                transition={{ delay: 0.1 }}
+                className="mb-4 font-mono text-sm"
               >
-                <Clock className="size-3" />
-                Status: Pending verification
+                <p className="text-primary">
+                  <span className="text-muted-foreground">$</span> payment_submitted
+                </p>
+                <p className="mt-1 text-amber-500">
+                  <span className="text-muted-foreground">&gt;</span> status:{" "}
+                  <span className="font-semibold">PENDING_VERIFICATION</span>
+                </p>
+                <p className="mt-1 text-muted-foreground">
+                  <span className="text-primary">&gt;</span> order_id:{" "}
+                  <span className="font-semibold text-foreground">
+                    {order.orderNumber}
+                  </span>
+                </p>
               </motion.div>
-            </div>
 
-            <div className="p-6 sm:p-8">
-              <div className="rounded-lg border bg-muted/30 p-4">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Amount paid</span>
-                  <span className="font-semibold">
-                    {formatPrice(order.finalAmount, order.currency)}
-                  </span>
-                </div>
-                <Separator className="my-2" />
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Payment method</span>
-                  <span className="font-medium">{order.paymentMethod}</span>
-                </div>
-                <Separator className="my-2" />
-                <div className="flex items-center justify-between gap-2 text-sm">
-                  <span className="text-muted-foreground">Transaction ref</span>
-                  <span className="truncate font-mono text-xs">
-                    {order.paymentRef}
-                  </span>
-                </div>
-                <Separator className="my-2" />
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Submitted at</span>
-                  <span className="font-medium">{formatDateTime(order.createdAt)}</span>
+              <div className="my-6 flex justify-center">
+                <motion.div
+                  initial={{ scale: 0, rotate: -180 }}
+                  animate={{ scale: 1, rotate: 0 }}
+                  transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+                  className="flex size-20 items-center justify-center rounded-full border border-primary/40 bg-primary/10 text-primary glow-green"
+                >
+                  <CheckCircle2 className="size-10" />
+                </motion.div>
+              </div>
+
+              <h2 className="text-center text-2xl font-bold tracking-tight text-glow-green">
+                PAYMENT SUBMITTED
+              </h2>
+              <p className="mt-2 text-center font-mono text-sm text-muted-foreground">
+                <span className="text-primary">$</span> your order is queued for
+                verification. we&apos;ll notify you once access is granted.
+              </p>
+
+              <Separator className="my-6 bg-primary/15" />
+
+              {/* What happens next */}
+              <div>
+                <p className="mb-4 font-mono text-xs uppercase tracking-widest text-primary">
+                  {"// what_happens_next"}
+                </p>
+                <div className="flex flex-col gap-3">
+                  {steps.map((step, i) => {
+                    const Icon = step.icon;
+                    return (
+                      <motion.div
+                        key={step.n}
+                        initial={{ opacity: 0, x: -8 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.3 + i * 0.1 }}
+                        className="flex items-center gap-3 rounded-md border border-primary/15 bg-card/40 p-3"
+                      >
+                        <span className="grid size-9 shrink-0 place-items-center rounded-md border border-primary/30 bg-primary/5 font-mono text-xs text-primary">
+                          {step.n}
+                        </span>
+                        <Icon className="size-4 text-primary" />
+                        <span className="font-mono text-sm text-foreground/90">
+                          {step.label}
+                        </span>
+                      </motion.div>
+                    );
+                  })}
                 </div>
               </div>
 
-              <h3 className="mt-6 text-sm font-semibold">What happens next?</h3>
-              <ol className="mt-3 space-y-3">
-                {steps.map((s, i) => (
-                  <li key={s.title} className="flex gap-3">
-                    <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary/15 text-xs font-bold text-primary">
-                      {i + 1}
-                    </span>
-                    <div>
-                      <p className="text-sm font-medium">{s.title}</p>
-                      <p className="text-xs text-muted-foreground">{s.body}</p>
-                    </div>
-                  </li>
-                ))}
-              </ol>
-
-              <div className="mt-7 flex flex-col gap-3 sm:flex-row">
-                <Button size="lg" className="flex-1" onClick={onContinue}>
-                  View My Learning
+              {/* Actions */}
+              <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+                <Button
+                  size="lg"
+                  onClick={onContinue}
+                  className="glow-green flex-1 gap-2 font-mono uppercase tracking-widest"
+                >
+                  <Terminal className="size-4" />
+                  VIEW MY LEARNING
                   <ArrowRight className="size-4" />
                 </Button>
-                <Button size="lg" variant="outline" onClick={onBack}>
-                  Back to Course
+                <Button
+                  size="lg"
+                  variant="outline"
+                  onClick={onBack}
+                  className="border-primary/30 font-mono uppercase tracking-widest text-primary"
+                >
+                  <ArrowLeft className="size-4" />
+                  BACK TO COURSE
                 </Button>
               </div>
-
-              <p className="mt-4 text-center text-xs text-muted-foreground">
-                We&apos;ve added this order to your dashboard. You&apos;ll get a
-                notification once it&apos;s approved.
-              </p>
             </div>
           </Card>
         </motion.div>

@@ -3,666 +3,505 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Code2,
-  BarChart3,
-  Palette,
-  BrainCircuit,
-  Megaphone,
-  Briefcase,
-  Zap,
   ArrowRight,
+  PlayCircle,
+  Star,
   Users,
   Globe,
-  ShieldCheck,
-  ShoppingBag,
-  Sparkles,
-  Tag,
-  Star,
+  Network,
+  Bug,
+  Cpu,
+  Swords,
+  Search,
+  Shield,
   ChevronRight,
+  Terminal,
+  Sparkles,
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { CourseCard } from "@/components/lms/course-card";
 import { StarRating } from "@/components/lms/star-rating";
 import { AnimatedReveal } from "@/components/lms/animated-reveal";
 import { useLms } from "@/lib/store";
 import { useCourses } from "@/hooks/use-courses";
-import { categories, instructorMap, platformStats } from "@/lib/data/catalog";
-import { formatPrice, formatNumber } from "@/lib/format";
+import { categories, platformStats, testimonials } from "@/lib/data/catalog";
+import { formatNumber } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import type { Course } from "@/lib/types";
 
 // ---------------------------------------------------------------------------
-// Category icon mapping (catalog stores icon as a lucide name string)
+// Category icon mapping (catalog stores icon name as a string)
 // ---------------------------------------------------------------------------
 const CATEGORY_ICONS: Record<string, LucideIcon> = {
-  Code2,
-  BarChart3,
-  Palette,
-  BrainCircuit,
-  Megaphone,
-  Briefcase,
+  Globe,
+  Network,
+  Bug,
+  Cpu,
+  Swords,
+  Search,
 };
 
 // ---------------------------------------------------------------------------
-// Sort options
+// Typewriter — types out a terminal-style line, then fades in the headline
 // ---------------------------------------------------------------------------
-type SortKey = "popular" | "newest" | "price-asc" | "price-desc" | "rating";
-
-const SORT_OPTIONS: { value: SortKey; label: string }[] = [
-  { value: "popular", label: "Popular" },
-  { value: "newest", label: "Newest" },
-  { value: "price-asc", label: "Price: Low to High" },
-  { value: "price-desc", label: "Price: High to Low" },
-  { value: "rating", label: "Top Rated" },
-];
-
-function sortCourses(list: Course[], sort: SortKey): Course[] {
-  const out = [...list];
-  switch (sort) {
-    case "newest":
-      return out.sort(
-        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      );
-    case "price-asc":
-      return out.sort((a, b) => a.price - b.price);
-    case "price-desc":
-      return out.sort((a, b) => b.price - a.price);
-    case "rating":
-      return out.sort((a, b) => b.rating - a.rating);
-    case "popular":
-    default:
-      return out.sort((a, b) => b.studentCount - a.studentCount);
-  }
-}
-
-function discountPct(c: Course): number {
-  if (!c.comparePrice || c.comparePrice <= c.price) return 0;
-  return Math.round(((c.comparePrice - c.price) / c.comparePrice) * 100);
-}
-
-function levelLabel(level: Course["level"]): string {
-  return level.charAt(0) + level.slice(1).toLowerCase();
-}
-
-// ---------------------------------------------------------------------------
-// Promo slides (auto-rotating)
-// ---------------------------------------------------------------------------
-const PROMO_SLIDES = [
-  {
-    eyebrow: "Skill up. Level up.",
-    title: "Learn from industry leaders, ship real projects.",
-    sub: "Hands-on courses in dev, design, data & AI — built for builders, not browsers.",
-    badge: "Up to 60% off",
-  },
-  {
-    eyebrow: "New season drop",
-    title: "Fresh courses on LLMs, RAG & agentic systems.",
-    sub: "Stay ahead with the tools shaping the next decade of software.",
-    badge: "New arrivals",
-  },
-  {
-    eyebrow: "Career boost",
-    title: "Crack your next role with interview-ready tracks.",
-    sub: "System design, ML & product — taught by ex-FAANG engineers.",
-    badge: "Best for interviews",
-  },
-];
-
-// ---------------------------------------------------------------------------
-// Compact horizontal product card (Flash Deals / Bestsellers rows)
-// ---------------------------------------------------------------------------
-function ProductRowCard({ course }: { course: Course }) {
-  const openCourse = useLms((s) => s.openCourse);
-  const addToCart = useLms((s) => s.addToCart);
-  const isInCart = useLms((s) => s.isInCart);
-  const inCart = isInCart(course.id);
-  const pct = discountPct(course);
-  const instructor = instructorMap[course.instructorId];
+function Typewriter({
+  text,
+  speed = 45,
+  onDone,
+}: {
+  text: string;
+  speed?: number;
+  onDone?: () => void;
+}) {
+  const [count, setCount] = useState(0);
+  useEffect(() => {
+    if (count >= text.length) {
+      onDone?.();
+      return;
+    }
+    const t = setTimeout(() => setCount((c) => c + 1), speed);
+    return () => clearTimeout(t);
+  }, [count, text, speed, onDone]);
 
   return (
-    <div className="group relative w-[260px] shrink-0 overflow-hidden rounded-xl border border-border/60 bg-card shadow-premium transition-shadow hover:shadow-glow sm:w-[300px]">
-      <button
-        type="button"
-        onClick={() => openCourse(course.slug)}
-        className="relative block w-full"
-        aria-label={`View ${course.title}`}
-      >
-        <div className="relative aspect-[16/10] overflow-hidden bg-muted">
-          <img
-            src={course.thumbnail}
-            alt={course.title}
-            className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-transparent" />
-          {pct > 0 && (
-            <Badge className="absolute left-2 top-2 gap-1 bg-rose-500/95 text-white hover:bg-rose-500">
-              <Tag className="size-3" />-{pct}%
-            </Badge>
-          )}
-          <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between text-[11px] text-white/90">
-            <span className="rounded-full bg-black/45 px-2 py-0.5 backdrop-blur">
-              {levelLabel(course.level)}
-            </span>
-            <span className="flex items-center gap-1 rounded-full bg-black/45 px-2 py-0.5 backdrop-blur">
-              <Users className="size-3" />
-              {formatNumber(course.studentCount)}
-            </span>
-          </div>
-        </div>
-      </button>
+    <span className="font-mono text-xs text-primary/80 sm:text-sm">
+      {text.slice(0, count)}
+      <span className="cursor-blink text-primary" />
+    </span>
+  );
+}
 
-      <div className="flex flex-col gap-1.5 p-3">
+// ---------------------------------------------------------------------------
+// Section heading — terminal comment style
+// ---------------------------------------------------------------------------
+function SectionHeading({
+  label,
+  action,
+}: {
+  label: string;
+  action?: { label: string; onClick: () => void };
+}) {
+  return (
+    <div className="mb-4 flex items-end justify-between gap-3">
+      <h2 className="font-mono text-sm font-bold uppercase tracking-wider text-primary sm:text-base">
+        <span className="text-muted-foreground/60">{"//"}</span> {label}
+      </h2>
+      {action && (
         <button
           type="button"
-          onClick={() => openCourse(course.slug)}
-          className="text-left text-sm font-semibold leading-snug tracking-tight line-clamp-2 transition-colors hover:text-primary"
+          onClick={action.onClick}
+          className="group flex shrink-0 items-center gap-1 font-mono text-xs text-muted-foreground transition-colors hover:text-primary"
         >
-          {course.title}
+          {action.label}
+          <ChevronRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
         </button>
-        {instructor && (
-          <span className="line-clamp-1 text-xs text-muted-foreground">{instructor.name}</span>
-        )}
-        <StarRating rating={course.rating} size={12} showValue count={course.reviewCount} />
-        <div className="mt-1 flex items-end justify-between gap-2">
-          <div className="flex flex-col">
-            <span className="text-base font-bold tracking-tight">
-              {formatPrice(course.price, course.currency)}
-            </span>
-            {course.comparePrice && (
-              <span className="text-xs text-muted-foreground line-through">
-                {formatPrice(course.comparePrice, course.currency)}
-              </span>
-            )}
-          </div>
-          <Button
-            size="sm"
-            variant={inCart ? "secondary" : "default"}
-            disabled={inCart}
-            onClick={(e) => {
-              e.stopPropagation();
-              if (!inCart) addToCart(course.id);
-            }}
-            aria-label={inCart ? `In cart: ${course.title}` : `Add ${course.title} to cart`}
-          >
-            {inCart ? "In Cart" : "Add"}
-          </Button>
-        </div>
-      </div>
+      )}
     </div>
   );
 }
 
+// ---------------------------------------------------------------------------
+// Floating badge chip
+// ---------------------------------------------------------------------------
+function FloatBadge({
+  children,
+  delay = 0,
+  className,
+}: {
+  children: React.ReactNode;
+  delay?: number;
+  className?: string;
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 12, scale: 0.9 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{ delay, duration: 0.5, ease: "easeOut" }}
+      className={cn(
+        "glass absolute flex items-center gap-1.5 rounded-md px-2.5 py-1.5 font-mono text-[11px] text-primary shadow-glow",
+        className
+      )}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
 // =========================================================================
-// HomeView — eCommerce storefront
+// HomeView — hacking/cyberpunk storefront (simple, terminal-vibe)
 // =========================================================================
 export function HomeView() {
   const courses = useCourses();
   const navigate = useLms((s) => s.navigate);
-  const openCourse = useLms((s) => s.openCourse);
+  const setAuthOpen = useLms((s) => s.setAuthOpen);
 
-  const [activeCat, setActiveCat] = useState<string>("all");
-  const [sort, setSort] = useState<SortKey>("popular");
-  const [slide, setSlide] = useState(0);
+  const [booted, setBooted] = useState(false);
 
-  // Auto-rotate promo slides
-  useEffect(() => {
-    const t = setInterval(() => {
-      setSlide((s) => (s + 1) % PROMO_SLIDES.length);
-    }, 5500);
-    return () => clearInterval(t);
-  }, []);
-
-  // Derived product collections
-  const flashDeals = useMemo(
-    () =>
-      courses
-        .filter((c) => discountPct(c) > 0)
-        .sort((a, b) => discountPct(b) - discountPct(a))
-        .slice(0, 6),
+  const featured = useMemo(
+    () => courses.filter((c) => c.featured).slice(0, 4),
     [courses]
   );
 
-  const bestsellers = useMemo(
-    () => [...courses].sort((a, b) => b.studentCount - a.studentCount).slice(0, 6),
-    [courses]
-  );
-
-  const maxDiscount = useMemo(
-    () => Math.max(0, ...courses.map(discountPct)),
-    [courses]
-  );
-
-  const liveCounts = useMemo(() => {
-    const map: Record<string, number> = {};
-    for (const c of courses) map[c.categoryId] = (map[c.categoryId] ?? 0) + 1;
-    return map;
-  }, [courses]);
-
-  const filtered = useMemo(() => {
-    const list =
-      activeCat === "all" ? courses : courses.filter((c) => c.categoryId === activeCat);
-    return sortCourses(list, sort);
-  }, [courses, activeCat, sort]);
-
-  const shopAll = () => navigate("catalog");
-  const goDeals = () => {
-    if (typeof document !== "undefined") {
-      document
-        .getElementById("flash-deals")
-        ?.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
-  };
-  const browseCategory = (catId: string) => {
-    setActiveCat(catId);
-    if (typeof document !== "undefined") {
-      document
-        .getElementById("all-courses")
-        ?.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
-  };
-
-  const heroThumbs = flashDeals.length >= 2 ? flashDeals : bestsellers;
-  const heroBadgePct = Math.max(60, maxDiscount);
+  const goCatalog = () => navigate("catalog");
+  const goPricing = () => navigate("pricing");
 
   return (
-    <div id="home" className="flex flex-col gap-10 pb-16 md:gap-14">
-      {/* ----------------------------------------------------------------- */}
-      {/* 1. PROMO HERO BANNER (slim, conversion-focused)                   */}
-      {/* ----------------------------------------------------------------- */}
-      <section
-        aria-label="Featured promotions"
-        className="relative mx-3 mt-3 overflow-hidden rounded-3xl gradient-brand shadow-glow sm:mx-4 md:mx-6 lg:mx-8"
+    <div className="relative">
+      {/* Ambient background blobs */}
+      <div
+        aria-hidden
+        className="pointer-events-none fixed inset-0 -z-10 overflow-hidden"
       >
-        <div className="pointer-events-none absolute inset-0 bg-grid opacity-40" aria-hidden />
-        <div
-          className="pointer-events-none absolute -right-20 -top-24 size-72 rounded-full bg-white/20 blur-3xl"
-          aria-hidden
-        />
-        <div
-          className="pointer-events-none absolute -bottom-28 -left-16 size-72 rounded-full bg-emerald-300/25 blur-3xl"
-          aria-hidden
-        />
+        <div className="absolute -left-32 top-0 size-96 rounded-full bg-primary/10 blur-[120px]" />
+        <div className="absolute -right-32 top-1/3 size-96 rounded-full bg-cyan-500/10 blur-[120px]" />
+        <div className="absolute bottom-0 left-1/2 size-96 -translate-x-1/2 rounded-full bg-primary/5 blur-[120px]" />
+      </div>
 
-        <div className="relative flex flex-col gap-6 px-5 py-7 sm:px-8 sm:py-9 md:flex-row md:items-center md:justify-between md:px-12 md:py-11">
-          <div className="max-w-2xl">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={slide}
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -12 }}
-                transition={{ duration: 0.45, ease: "easeOut" }}
-                className="flex flex-col gap-3"
-              >
-                <span className="inline-flex w-fit items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-white backdrop-blur">
-                  <Sparkles className="size-3.5" />
-                  {PROMO_SLIDES[slide].eyebrow}
-                </span>
-                <h1 className="text-3xl font-extrabold leading-tight tracking-tight text-white sm:text-4xl md:text-[2.75rem]">
-                  {PROMO_SLIDES[slide].title}
-                </h1>
-                <p className="max-w-xl text-sm text-white/85 sm:text-base">
-                  {PROMO_SLIDES[slide].sub}
-                </p>
-              </motion.div>
-            </AnimatePresence>
-
-            <div className="mt-5 flex flex-wrap items-center gap-3">
-              <Button
-                size="lg"
-                onClick={shopAll}
-                className="bg-white text-emerald-700 hover:bg-white/90"
-              >
-                <ShoppingBag className="size-4" />
-                Shop All Courses
-              </Button>
-              <Button
-                size="lg"
-                variant="outline"
-                onClick={goDeals}
-                className="border-white/40 bg-white/10 text-white hover:bg-white/20 hover:text-white"
-              >
-                <Zap className="size-4" />
-                Today&apos;s Deals
-              </Button>
-              <Badge className="bg-amber-400 text-amber-950 hover:bg-amber-400">
-                Up to {heroBadgePct}% off
-              </Badge>
+      <div className="mx-auto max-w-7xl space-y-16 px-4 py-8 sm:px-6 sm:py-12 lg:px-8 lg:space-y-24">
+        {/* ============================================================
+            (a) HERO — terminal window
+            ============================================================ */}
+        <AnimatedReveal>
+          <section
+            aria-label="Hero"
+            className="terminal-window scanlines relative overflow-hidden rounded-lg"
+          >
+            {/* Title bar */}
+            <div className="relative z-10 flex items-center justify-between border-b border-primary/30 bg-background/80 px-4 py-2.5">
+              <div className="flex items-center gap-2">
+                <span className="size-3 rounded-full bg-destructive/80" />
+                <span className="size-3 rounded-full bg-warning/80" />
+                <span className="size-3 rounded-full bg-primary/90 glow-green" />
+              </div>
+              <span className="font-mono text-xs text-muted-foreground">
+                root@waynes: <span className="text-primary/80">~</span>
+                <span className="text-muted-foreground/60">#</span> ./access.sh
+              </span>
+              <span className="font-mono text-xs text-muted-foreground/60">bash</span>
             </div>
 
-            {/* slide dots */}
-            <div
-              className="mt-5 flex items-center gap-1.5"
-              role="tablist"
-              aria-label="Promo slides"
-            >
-              {PROMO_SLIDES.map((s, i) => (
-                <button
-                  key={s.eyebrow}
-                  type="button"
-                  role="tab"
-                  aria-selected={i === slide}
-                  aria-label={`Show promo ${i + 1}: ${s.eyebrow}`}
-                  onClick={() => setSlide(i)}
-                  className={cn(
-                    "h-1.5 rounded-full transition-all",
-                    i === slide ? "w-6 bg-white" : "w-2 bg-white/40 hover:bg-white/70"
+            {/* Body */}
+            <div className="bg-grid relative z-10 grid gap-6 p-6 sm:p-10 lg:grid-cols-[1.1fr_0.9fr] lg:gap-10 lg:p-14">
+              {/* Left — copy */}
+              <div className="relative">
+                {/* Boot line */}
+                <div className="mb-4 min-h-[1.25rem]">
+                  {!booted ? (
+                    <Typewriter
+                      text="> initializing access..."
+                      onDone={() => setBooted(true)}
+                    />
+                  ) : (
+                    <motion.span
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="font-mono text-xs text-primary/80 sm:text-sm"
+                    >
+                      {"> access granted. welcome, operator."}
+                      <span className="cursor-blink text-primary" />
+                    </motion.span>
                   )}
-                />
-              ))}
-            </div>
-          </div>
+                </div>
 
-          {/* Floating product thumbnails */}
-          <div className="relative hidden shrink-0 md:block" aria-hidden>
-            <div className="grid grid-cols-2 gap-3">
-              {heroThumbs.slice(0, 2).map((c, i) => {
-                const pct = discountPct(c);
+                {/* Headline */}
+                <AnimatePresence>
+                  {booted && (
+                    <motion.h1
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.5 }}
+                      className="glitch font-mono text-3xl font-black leading-[1.05] tracking-tight text-primary text-glow-green sm:text-5xl lg:text-6xl"
+                    >
+                      Hack the Planet.
+                      <br />
+                      <span className="text-gradient-brand">Legally.</span>
+                    </motion.h1>
+                  )}
+                </AnimatePresence>
+
+                <p className="mt-4 max-w-md font-mono text-sm text-muted-foreground sm:text-base">
+                  Master ethical hacking from elite hackers. Real labs, real
+                  CVEs, real careers.
+                </p>
+
+                {/* CTAs */}
+                <div className="mt-6 flex flex-wrap items-center gap-3">
+                  <Button
+                    onClick={goCatalog}
+                    className="gap-2 rounded-md font-mono text-xs uppercase tracking-wider glow-green sm:text-sm"
+                  >
+                    <Terminal className="size-4" /> Browse Courses
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setAuthOpen(true, "signup")}
+                    className="gap-2 rounded-md border-primary/40 font-mono text-xs uppercase tracking-wider text-primary hover:bg-primary/10 hover:text-primary sm:text-sm"
+                  >
+                    <PlayCircle className="size-4" /> Watch Demo
+                  </Button>
+                </div>
+
+                {/* Fake terminal output */}
+                <div className="mt-6 rounded-md border border-primary/20 bg-background/60 p-3 font-mono text-[11px] leading-relaxed sm:text-xs">
+                  <div className="text-muted-foreground">
+                    <span className="text-primary/70">$</span> nmap -sV waynes.io
+                  </div>
+                  <div className="text-cyan-400/80">
+                    {"> "}{courses.length || platformStats.courses} courses found. All systems go.
+                    <span className="cursor-blink text-primary" />
+                  </div>
+                </div>
+
+                {/* Floating badges — desktop only, absolutely positioned */}
+                <FloatBadge delay={0.6} className="-right-4 top-4 hidden lg:flex">
+                  <Star className="size-3 fill-amber-400 text-amber-400" />
+                  {platformStats.rating} rating
+                </FloatBadge>
+                <FloatBadge delay={0.8} className="right-8 top-24 hidden lg:flex">
+                  <Users className="size-3" />
+                  {formatNumber(platformStats.students)}+ hackers
+                </FloatBadge>
+                <FloatBadge delay={1.0} className="-right-2 top-44 hidden lg:flex">
+                  <Shield className="size-3" /> OSCP-ready
+                </FloatBadge>
+              </div>
+
+              {/* Right — visual terminal stack (hidden on small) */}
+              <div className="relative hidden lg:block">
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.4, duration: 0.6 }}
+                  className="terminal-window relative overflow-hidden rounded-lg"
+                >
+                  <div className="flex items-center gap-2 border-b border-primary/20 px-3 py-2">
+                    <span className="size-2.5 rounded-full bg-destructive/70" />
+                    <span className="size-2.5 rounded-full bg-warning/70" />
+                    <span className="size-2.5 rounded-full bg-primary/80" />
+                    <span className="ml-2 font-mono text-[10px] text-muted-foreground">
+                      payload.sh
+                    </span>
+                  </div>
+                  <pre className="overflow-hidden p-4 font-mono text-[11px] leading-relaxed text-muted-foreground">
+                    <span className="text-primary/70">$</span> whoami{"\n"}
+                    <span className="text-primary">anonymous_operator</span>{"\n\n"}
+                    <span className="text-primary/70">$</span> ls /skills{"\n"}
+                    <span className="text-cyan-400/80">recon/  exploit/  report/</span>{"\n\n"}
+                    <span className="text-primary/70">$</span> ./learn --start{"\n"}
+                    <span className="text-primary">{">"} booting labs...</span>{"\n"}
+                    <span className="text-primary">{">"} 8 courses loaded</span>{"\n"}
+                    <span className="text-primary">{">"} access: <span className="text-amber-400">GRANTED</span></span>
+                    <span className="cursor-blink text-primary" />
+                  </pre>
+                </motion.div>
+              </div>
+            </div>
+          </section>
+        </AnimatedReveal>
+
+        {/* ============================================================
+            (b) TRUST STRIP
+            ============================================================ */}
+        <AnimatedReveal delay={50}>
+          <section aria-label="Trust signals">
+            <div className="glass flex flex-wrap items-center justify-center gap-x-8 gap-y-3 rounded-md px-4 py-3 sm:gap-x-12">
+              <TrustItem
+                icon={<Users className="size-3.5" />}
+                value={formatNumber(platformStats.students)}
+                label="hackers"
+              />
+              <TrustItem
+                icon={<Terminal className="size-3.5" />}
+                value={String(platformStats.courses)}
+                label="courses"
+              />
+              <TrustItem
+                icon={<Globe className="size-3.5" />}
+                value={String(platformStats.countries)}
+                label="countries"
+              />
+              <TrustItem
+                icon={<Shield className="size-3.5" />}
+                value="7-day"
+                label="refund"
+              />
+            </div>
+          </section>
+        </AnimatedReveal>
+
+        {/* ============================================================
+            (c) CATEGORIES
+            ============================================================ */}
+        <AnimatedReveal>
+          <section aria-label="Categories">
+            <h2 className="mb-4 font-mono text-sm font-bold uppercase tracking-wider text-primary sm:text-base">
+              <span className="text-muted-foreground/60">{">"}</span> select your path
+            </h2>
+            <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 pb-2 sm:mx-0 sm:px-0">
+              {categories.map((cat) => {
+                const Icon = CATEGORY_ICONS[cat.icon] ?? Terminal;
                 return (
                   <button
-                    key={c.id}
+                    key={cat.id}
                     type="button"
-                    onClick={() => openCourse(c.slug)}
-                    className={cn(
-                      "group/card relative w-44 overflow-hidden rounded-xl bg-white/10 p-2 text-left backdrop-blur transition-transform hover:-translate-y-1",
-                      i === 1 && "translate-y-4"
-                    )}
+                    onClick={goCatalog}
+                    className="group flex shrink-0 items-center gap-2 rounded-md border border-border/60 bg-card px-4 py-2.5 font-mono text-xs text-muted-foreground transition-colors hover:border-primary hover:text-primary hover:glow-green"
                   >
-                    <div className="relative aspect-video overflow-hidden rounded-lg">
-                      <img
-                        src={c.thumbnail}
-                        alt=""
-                        className="absolute inset-0 h-full w-full object-cover"
-                      />
-                      {pct > 0 && (
-                        <span className="absolute left-1 top-1 rounded-md bg-rose-500 px-1.5 py-0.5 text-[10px] font-bold text-white">
-                          -{pct}%
-                        </span>
-                      )}
-                    </div>
-                    <div className="mt-2 px-1">
-                      <p className="line-clamp-1 text-xs font-semibold text-white">{c.title}</p>
-                      <p className="text-xs font-bold text-white">
-                        {formatPrice(c.price, c.currency)}
-                      </p>
-                    </div>
+                    <Icon className="size-4 text-primary/70 transition-transform group-hover:scale-110" />
+                    <span className="uppercase tracking-wider">{cat.name}</span>
+                    <span className="text-[10px] text-muted-foreground/60">
+                      [{cat.courseCount}]
+                    </span>
                   </button>
                 );
               })}
             </div>
-          </div>
-        </div>
-      </section>
+          </section>
+        </AnimatedReveal>
 
-      {/* ----------------------------------------------------------------- */}
-      {/* 2. TRUST STRIP                                                    */}
-      {/* ----------------------------------------------------------------- */}
-      <section
-        aria-label="Why learners choose Waynes"
-        className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8"
-      >
-        <ul className="flex flex-wrap items-center divide-x divide-border/60 rounded-xl border border-border/60 bg-card/60 px-2 py-3 text-sm shadow-premium">
-          {[
-            {
-              icon: Star,
-              value: platformStats.rating.toFixed(1),
-              label: "Average rating",
-            },
-            {
-              icon: Users,
-              value: `${formatNumber(platformStats.students)}+`,
-              label: "Active learners",
-            },
-            {
-              icon: Globe,
-              value: `${platformStats.countries}`,
-              label: "Countries served",
-            },
-            {
-              icon: ShieldCheck,
-              value: "7-day",
-              label: "Money-back guarantee",
-            },
-          ].map(({ icon: Icon, value, label }) => (
-            <li
-              key={label}
-              className="flex min-w-[140px] flex-1 items-center justify-center gap-2 px-3 py-1"
-            >
-              <Icon className="size-4 shrink-0 text-primary" aria-hidden />
-              <span className="flex items-baseline gap-1.5">
-                <span className="font-semibold tabular-nums">{value}</span>
-                <span className="text-xs text-muted-foreground">{label}</span>
-              </span>
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      {/* ----------------------------------------------------------------- */}
-      {/* 3. CATEGORY BAR                                                   */}
-      {/* ----------------------------------------------------------------- */}
-      <section
-        aria-label="Browse by category"
-        className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8"
-      >
-        <div className="no-scrollbar -mx-1 flex items-center gap-2 overflow-x-auto px-1 pb-1">
-          <CategoryPill
-            active={activeCat === "all"}
-            onClick={() => setActiveCat("all")}
-            label="All"
-            count={courses.length}
-          />
-          {categories.map((cat) => {
-            const Icon = CATEGORY_ICONS[cat.icon] ?? Sparkles;
-            return (
-              <CategoryPill
-                key={cat.id}
-                active={activeCat === cat.id}
-                onClick={() => setActiveCat(cat.id)}
-                label={cat.name}
-                count={liveCounts[cat.id] ?? cat.courseCount}
-                icon={<Icon className="size-4" aria-hidden />}
+        {/* ============================================================
+            (d) FEATURED COURSES
+            ============================================================ */}
+        {featured.length > 0 && (
+          <AnimatedReveal>
+            <section aria-label="Featured courses">
+              <SectionHeading
+                label="FEATURED EXPLOITS"
+                action={{ label: "View all", onClick: goCatalog }}
               />
-            );
-          })}
-        </div>
-      </section>
-
-      {/* ----------------------------------------------------------------- */}
-      {/* 4. FLASH DEALS                                                    */}
-      {/* ----------------------------------------------------------------- */}
-      {flashDeals.length > 0 && (
-        <section
-          id="flash-deals"
-          aria-label="Flash deals"
-          className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8"
-        >
-          <SectionHeader
-            icon={<Zap className="size-5 text-amber-400" aria-hidden />}
-            title="Flash Deals"
-            subtitle="Limited-time discounts on top courses"
-            onAction={shopAll}
-          />
-          <AnimatedReveal>
-            <div className="no-scrollbar -mx-1 flex items-stretch gap-4 overflow-x-auto px-1 pb-3">
-              {flashDeals.map((c) => (
-                <ProductRowCard key={c.id} course={c} />
-              ))}
-            </div>
-          </AnimatedReveal>
-        </section>
-      )}
-
-      {/* ----------------------------------------------------------------- */}
-      {/* 5. MAIN PRODUCT GRID                                              */}
-      {/* ----------------------------------------------------------------- */}
-      <section
-        id="all-courses"
-        aria-label="All courses"
-        className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8"
-      >
-        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">All Courses</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {filtered.length} {filtered.length === 1 ? "course" : "courses"}
-              {activeCat !== "all" && (
-                <>
-                  {" "}
-                  in{" "}
-                  <span className="font-medium text-foreground">
-                    {categories.find((c) => c.id === activeCat)?.name ?? "category"}
-                  </span>
-                </>
-              )}
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <label htmlFor="sort-select" className="text-xs text-muted-foreground">
-              Sort by
-            </label>
-            <Select value={sort} onValueChange={(v) => setSort(v as SortKey)}>
-              <SelectTrigger id="sort-select" size="sm" className="w-[180px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {SORT_OPTIONS.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </SelectItem>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {featured.map((c, i) => (
+                  <AnimatedReveal key={c.id} delay={i * 60} y={20}>
+                    <CourseCard course={c} className="h-full" />
+                  </AnimatedReveal>
                 ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        {filtered.length > 0 ? (
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {filtered.map((c, i) => (
-              <AnimatedReveal key={c.id} delay={(i % 4) * 60}>
-                <CourseCard course={c} />
-              </AnimatedReveal>
-            ))}
-          </div>
-        ) : (
-          <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border/70 bg-card/40 py-16 text-center">
-            <p className="text-base font-medium">No courses in this category yet.</p>
-            <p className="text-sm text-muted-foreground">Try another category or browse all.</p>
-            <Button size="sm" variant="outline" onClick={shopAll} className="mt-1">
-              Browse all courses
-              <ArrowRight className="size-4" />
-            </Button>
-          </div>
+              </div>
+            </section>
+          </AnimatedReveal>
         )}
-      </section>
 
-      {/* ----------------------------------------------------------------- */}
-      {/* 6. BESTSELLERS                                                    */}
-      {/* ----------------------------------------------------------------- */}
-      {bestsellers.length > 0 && (
-        <section
-          aria-label="Bestsellers"
-          className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8"
-        >
-          <SectionHeader
-            icon={<span aria-hidden>🔥</span>}
-            title="Bestsellers"
-            subtitle="Most enrolled courses this month"
-            onAction={shopAll}
-          />
-          <AnimatedReveal>
-            <div className="no-scrollbar -mx-1 flex items-stretch gap-4 overflow-x-auto px-1 pb-3">
-              {bestsellers.map((c) => (
-                <ProductRowCard key={c.id} course={c} />
+        {/* ============================================================
+            (e) ALL COURSES
+            ============================================================ */}
+        <AnimatedReveal>
+          <section aria-label="All courses" id="all-courses" className="scroll-mt-24">
+            <SectionHeading label={`ALL COURSES · ${courses.length} results`} />
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {courses.map((c, i) => (
+                <AnimatedReveal key={c.id} delay={Math.min(i, 6) * 40} y={20}>
+                  <CourseCard course={c} className="h-full" />
+                </AnimatedReveal>
               ))}
             </div>
-          </AnimatedReveal>
-        </section>
-      )}
+          </section>
+        </AnimatedReveal>
 
-      {/* ----------------------------------------------------------------- */}
-      {/* 7. CATEGORIES GRID                                                */}
-      {/* ----------------------------------------------------------------- */}
-      <section
-        aria-label="Shop by category"
-        className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8"
-      >
-        <div className="mb-4 flex items-end justify-between">
-          <div>
-            <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">Shop by Category</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {categories.length} categories · {courses.length} courses
-            </p>
-          </div>
-        </div>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-          {categories.map((cat) => {
-            const Icon = CATEGORY_ICONS[cat.icon] ?? Sparkles;
-            const count = liveCounts[cat.id] ?? cat.courseCount;
-            return (
-              <button
-                key={cat.id}
-                type="button"
-                onClick={() => browseCategory(cat.id)}
-                className="group relative flex flex-col items-start gap-3 overflow-hidden rounded-xl border border-border/60 bg-card p-4 text-left shadow-premium transition-all hover:-translate-y-1 hover:border-primary/40 hover:shadow-glow"
-                aria-label={`Browse ${cat.name} courses`}
-              >
-                <div className="flex size-10 items-center justify-center rounded-lg gradient-brand-soft text-primary">
-                  <Icon className="size-5" aria-hidden />
-                </div>
-                <div className="flex flex-col">
-                  <span className="line-clamp-2 text-sm font-semibold tracking-tight">
-                    {cat.name}
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    {count} {count === 1 ? "course" : "courses"}
-                  </span>
-                </div>
-                <ChevronRight className="absolute right-3 top-3 size-4 text-muted-foreground/50 transition-all group-hover:right-2 group-hover:text-primary" />
-              </button>
-            );
-          })}
-        </div>
-      </section>
-
-      {/* ----------------------------------------------------------------- */}
-      {/* 8. SLIM CTA BAND                                                  */}
-      {/* ----------------------------------------------------------------- */}
-      <section
-        aria-label="Start learning"
-        className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8"
-      >
-        <div className="relative overflow-hidden rounded-2xl gradient-brand px-6 py-7 shadow-glow sm:px-10 sm:py-8">
-          <div className="pointer-events-none absolute inset-0 bg-grid opacity-30" aria-hidden />
-          <div className="relative flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
-            <div>
-              <h2 className="text-xl font-bold tracking-tight text-white sm:text-2xl">
-                Ready to start learning?
-              </h2>
-              <p className="mt-1 text-sm text-white/85">
-                Browse {courses.length} expert-led courses and join {formatNumber(platformStats.students)}+ learners worldwide.
-              </p>
+        {/* ============================================================
+            (f) STATS BAND
+            ============================================================ */}
+        <AnimatedReveal>
+          <section
+            aria-label="Platform stats"
+            className="bg-grid relative overflow-hidden rounded-lg border border-primary/20 bg-background/60"
+          >
+            <div className="grid grid-cols-2 divide-x divide-y divide-primary/15 sm:grid-cols-4 sm:divide-y-0">
+              <StatCell
+                value={formatNumber(platformStats.students)}
+                label="HACKERS"
+              />
+              <StatCell
+                value={String(platformStats.courses)}
+                label="COURSES"
+              />
+              <StatCell
+                value={`${platformStats.hoursOfContent}+`}
+                label="HOURS"
+              />
+              <StatCell
+                value={String(platformStats.countries)}
+                label="COUNTRIES"
+              />
             </div>
-            <Button
-              size="lg"
-              onClick={shopAll}
-              className="bg-white text-emerald-700 hover:bg-white/90"
-            >
-              <ShoppingBag className="size-4" />
-              Browse Courses
-            </Button>
-          </div>
-        </div>
-      </section>
+          </section>
+        </AnimatedReveal>
+
+        {/* ============================================================
+            (g) TESTIMONIALS — FIELD REPORTS
+            ============================================================ */}
+        <AnimatedReveal>
+          <section aria-label="Field reports">
+            <SectionHeading label="FIELD REPORTS" />
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {testimonials.slice(0, 3).map((t, i) => (
+                <AnimatedReveal key={t.id} delay={i * 70} y={20}>
+                  <figure className="glass flex h-full flex-col gap-3 rounded-md p-5">
+                    <StarRating rating={t.rating} size={12} />
+                    <blockquote className="flex-1 font-mono text-xs leading-relaxed text-foreground/90">
+                      <span className="text-primary/60">{"> "}</span>
+                      {t.quote}
+                    </blockquote>
+                    <figcaption className="flex items-center gap-2 border-t border-primary/15 pt-3">
+                      <img
+                        src={t.avatar}
+                        alt={t.name}
+                        className="size-7 rounded-full border border-primary/40 object-cover"
+                      />
+                      <div className="flex flex-col">
+                        <span className="font-mono text-xs font-bold text-primary">
+                          {t.name}
+                        </span>
+                        <span className="font-mono text-[10px] text-muted-foreground">
+                          {t.role}
+                        </span>
+                      </div>
+                    </figcaption>
+                  </figure>
+                </AnimatedReveal>
+              ))}
+            </div>
+          </section>
+        </AnimatedReveal>
+
+        {/* ============================================================
+            (h) FINAL CTA — terminal window
+            ============================================================ */}
+        <AnimatedReveal>
+          <section
+            aria-label="Get started"
+            className="terminal-window scanlines relative overflow-hidden rounded-lg"
+          >
+            <div className="relative z-10 flex flex-col items-center gap-4 p-8 text-center sm:p-12">
+              <div className="flex items-center gap-2 font-mono text-xs text-muted-foreground">
+                <span className="size-1.5 animate-pulse rounded-full bg-primary glow-green" />
+                root@waynes: <span className="text-primary/80">~</span>
+                <span className="text-muted-foreground/60">#</span> ./enroll
+              </div>
+              <h2 className="glitch font-mono text-2xl font-black tracking-tight text-primary text-glow-green sm:text-4xl">
+                {">"} ready_to_start = True
+              </h2>
+              <p className="max-w-md font-mono text-xs text-muted-foreground sm:text-sm">
+                Provision your access. Pick a path. Start hacking in under 60
+                seconds.
+              </p>
+              <div className="flex flex-wrap items-center justify-center gap-3">
+                <Button
+                  onClick={goCatalog}
+                  className="gap-2 rounded-md font-mono text-xs uppercase tracking-wider glow-green sm:text-sm"
+                >
+                  <Sparkles className="size-4" /> Get Access
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={goPricing}
+                  className="gap-2 rounded-md border-primary/40 font-mono text-xs uppercase tracking-wider text-primary hover:bg-primary/10 hover:text-primary sm:text-sm"
+                >
+                  View Pricing <ArrowRight className="size-4" />
+                </Button>
+              </div>
+            </div>
+          </section>
+        </AnimatedReveal>
+      </div>
     </div>
   );
 }
@@ -670,75 +509,33 @@ export function HomeView() {
 // ---------------------------------------------------------------------------
 // Sub-components
 // ---------------------------------------------------------------------------
-function CategoryPill({
-  active,
-  onClick,
-  label,
-  count,
+function TrustItem({
   icon,
+  value,
+  label,
 }: {
-  active: boolean;
-  onClick: () => void;
+  icon: React.ReactNode;
+  value: string;
   label: string;
-  count: number;
-  icon?: React.ReactNode;
 }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={active}
-      className={cn(
-        "flex shrink-0 items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-all",
-        active
-          ? "gradient-brand border-transparent text-white shadow-glow"
-          : "border-border/70 bg-card text-foreground hover:border-primary/40 hover:bg-accent"
-      )}
-    >
-      {icon}
+    <div className="flex items-center gap-2 font-mono text-xs text-muted-foreground">
+      <span className="text-primary/70">{icon}</span>
+      <span className="font-bold text-foreground">{value}</span>
       <span>{label}</span>
-      <span
-        className={cn(
-          "rounded-full px-1.5 py-0.5 text-[10px] font-semibold tabular-nums",
-          active ? "bg-white/25 text-white" : "bg-muted text-muted-foreground"
-        )}
-      >
-        {count}
-      </span>
-    </button>
+    </div>
   );
 }
 
-function SectionHeader({
-  icon,
-  title,
-  subtitle,
-  onAction,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  subtitle?: string;
-  onAction?: () => void;
-}) {
+function StatCell({ value, label }: { value: string; label: string }) {
   return (
-    <div className="mb-4 flex items-end justify-between gap-3">
-      <div className="flex items-center gap-2.5">
-        {icon}
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">{title}</h2>
-          {subtitle && <p className="mt-0.5 text-sm text-muted-foreground">{subtitle}</p>}
-        </div>
-      </div>
-      {onAction && (
-        <button
-          type="button"
-          onClick={onAction}
-          className="group inline-flex shrink-0 items-center gap-1 text-sm font-medium text-primary hover:underline"
-        >
-          View all
-          <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
-        </button>
-      )}
+    <div className="flex flex-col items-center gap-1 p-6 text-center sm:p-8">
+      <span className="font-mono text-3xl font-black tracking-tight text-primary text-glow-green sm:text-5xl">
+        {value}
+      </span>
+      <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground sm:text-xs">
+        {label}
+      </span>
     </div>
   );
 }

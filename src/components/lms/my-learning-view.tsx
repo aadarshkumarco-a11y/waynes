@@ -5,13 +5,17 @@ import { motion } from "framer-motion";
 import {
   Award,
   BookOpen,
+  Check,
   CheckCircle2,
   Clock,
-  Compass,
   FileText,
+  Lock,
   PlayCircle,
   Search,
+  Skull,
+  Terminal,
   TrendingUp,
+  Zap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -21,24 +25,25 @@ import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useLms } from "@/lib/store";
-import { courseMap, instructorMap } from "@/lib/data/catalog";
-import { courseStats } from "@/lib/data/catalog";
-import {
-  formatDateTime,
-  formatDuration,
-  formatPrice,
-  timeAgo,
-} from "@/lib/format";
+import { courseMap, instructorMap, courseStats } from "@/lib/data/catalog";
+import { formatDateTime, formatDuration, formatPrice, timeAgo } from "@/lib/format";
 import type { Enrollment, Order, OrderStatus } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 type FilterKey = "all" | "in-progress" | "completed";
 
 const ORDER_STATUS_STYLES: Record<OrderStatus, string> = {
-  PENDING: "bg-amber-500/15 text-amber-600 dark:text-amber-300 border-amber-500/30",
-  APPROVED: "bg-primary/15 text-primary border-primary/30",
-  REJECTED: "bg-destructive/15 text-destructive border-destructive/30",
-  REFUNDED: "bg-muted text-muted-foreground border-border",
+  PENDING: "border-amber-500/40 bg-amber-500/10 text-amber-500",
+  APPROVED: "border-primary/40 bg-primary/10 text-primary",
+  REJECTED: "border-destructive/40 bg-destructive/10 text-destructive",
+  REFUNDED: "border-violet-500/40 bg-violet-500/10 text-violet-400",
+};
+
+const ORDER_STATUS_LABEL: Record<OrderStatus, string> = {
+  PENDING: "PENDING",
+  APPROVED: "APPROVED",
+  REJECTED: "REJECTED",
+  REFUNDED: "REFUNDED",
 };
 
 export function MyLearningView() {
@@ -89,7 +94,6 @@ export function MyLearningView() {
         return course.title.toLowerCase().includes(query.toLowerCase());
       })
       .sort((a, b) => {
-        // active first, then lastViewedAt desc
         if (a.completed !== b.completed) return a.completed ? 1 : -1;
         return (
           new Date(b.lastViewedAt ?? b.enrolledAt).getTime() -
@@ -101,32 +105,49 @@ export function MyLearningView() {
   // ---------------- NOT LOGGED IN ----------------
   if (!user) {
     return (
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
-        className="mx-auto flex max-w-xl flex-col items-center px-4 py-20 text-center"
-      >
-        <div className="mb-5 flex size-20 items-center justify-center rounded-full gradient-brand shadow-glow">
-          <BookOpen className="size-10 text-white" />
-        </div>
-        <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">
-          Sign in to view your learning
-        </h2>
-        <p className="mt-2 text-muted-foreground">
-          Track your enrolled courses, lesson progress, certificates, and orders — all
-          in one place.
-        </p>
-        <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-          <Button size="lg" onClick={() => setAuthOpen(true, "login")}>
-            Sign in
-          </Button>
-          <Button size="lg" variant="outline" onClick={() => navigate("catalog")}>
-            <Compass className="size-4" />
-            Browse catalog
-          </Button>
-        </div>
-      </motion.div>
+      <div className="relative mx-auto flex min-h-[70vh] w-full max-w-2xl flex-col items-center justify-center px-4 py-16 text-center">
+        <div className="pointer-events-none absolute inset-0 -z-10 bg-grid opacity-30" />
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.4 }}
+          className="terminal-window px-8 py-12"
+        >
+          <div className="mb-4 flex size-16 items-center justify-center rounded-full border border-destructive/40 bg-destructive/5 text-destructive glow-red">
+            <Lock className="size-9" />
+          </div>
+          <p className="font-mono text-xs uppercase tracking-widest text-destructive">
+            error 403
+          </p>
+          <h1 className="mt-2 text-2xl font-bold tracking-tight text-glow-red sm:text-3xl">
+            ACCESS DENIED
+          </h1>
+          <p className="mt-3 max-w-md font-mono text-sm text-muted-foreground">
+            <span className="text-destructive">$</span> authentication required
+            to access the arsenal. sign in to view your enrolled courses,
+            progress, and certificates.
+          </p>
+          <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
+            <Button
+              size="lg"
+              onClick={() => setAuthOpen(true, "login")}
+              className="glow-green gap-2 font-mono uppercase tracking-widest"
+            >
+              <Terminal className="size-4" />
+              AUTHENTICATE
+            </Button>
+            <Button
+              size="lg"
+              variant="outline"
+              onClick={() => navigate("catalog")}
+              className="border-primary/30 font-mono uppercase tracking-widest text-primary"
+            >
+              <Search className="size-4" />
+              browse_catalog
+            </Button>
+          </div>
+        </motion.div>
+      </div>
     );
   }
 
@@ -139,19 +160,28 @@ export function MyLearningView() {
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
-          className="mt-10 flex flex-col items-center rounded-2xl border border-dashed bg-muted/20 p-12 text-center"
+          className="terminal-window mt-10 flex flex-col items-center px-6 py-16 text-center"
         >
-          <div className="mb-4 flex size-16 items-center justify-center rounded-full bg-muted">
-            <BookOpen className="size-8 text-muted-foreground" />
+          <div className="mb-4 flex size-16 items-center justify-center rounded-full border border-primary/30 bg-primary/5 text-primary">
+            <Terminal className="size-8" />
           </div>
-          <h3 className="text-xl font-semibold">No courses yet</h3>
-          <p className="mt-1 max-w-sm text-muted-foreground">
-            You haven&apos;t enrolled in any courses. Explore our catalog and start
-            your learning journey today.
+          <p className="font-mono text-xs uppercase tracking-widest text-primary">
+            $ scan complete
           </p>
-          <Button className="mt-5" size="lg" onClick={() => navigate("catalog")}>
-            <Compass className="size-4" />
-            Explore the catalog
+          <h3 className="mt-2 text-xl font-bold tracking-tight text-glow-green">
+            {"// NO_COURSES_FOUND"}
+          </h3>
+          <p className="mt-2 max-w-sm font-mono text-sm text-muted-foreground">
+            <span className="text-primary">$</span> your arsenal is empty.
+            browse the catalog and acquire your first exploit course.
+          </p>
+          <Button
+            className="mt-5 gap-2 font-mono uppercase tracking-widest glow-green"
+            size="lg"
+            onClick={() => navigate("catalog")}
+          >
+            <Search className="size-4" />
+            &gt; browse_catalog
           </Button>
         </motion.div>
 
@@ -168,50 +198,64 @@ export function MyLearningView() {
       {/* Filters + search */}
       <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <Tabs value={filter} onValueChange={(v) => setFilter(v as FilterKey)}>
-          <TabsList>
-            <TabsTrigger value="all">
-              All <span className="ml-1 text-xs opacity-70">{stats.enrolled}</span>
+          <TabsList className="border border-primary/20 bg-card/40">
+            <TabsTrigger
+              value="all"
+              className="font-mono text-xs uppercase tracking-widest data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+            >
+              All <span className="ml-1 opacity-70">{stats.enrolled}</span>
             </TabsTrigger>
-            <TabsTrigger value="in-progress">
-              In Progress <span className="ml-1 text-xs opacity-70">{stats.inProgress}</span>
+            <TabsTrigger
+              value="in-progress"
+              className="font-mono text-xs uppercase tracking-widest data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+            >
+              Active <span className="ml-1 opacity-70">{stats.inProgress}</span>
             </TabsTrigger>
-            <TabsTrigger value="completed">
-              Completed <span className="ml-1 text-xs opacity-70">{stats.completed}</span>
+            <TabsTrigger
+              value="completed"
+              className="font-mono text-xs uppercase tracking-widest data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+            >
+              Cleared <span className="ml-1 opacity-70">{stats.completed}</span>
             </TabsTrigger>
           </TabsList>
         </Tabs>
         <div className="relative w-full sm:w-72">
-          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 font-mono text-sm text-primary">
+            &gt;
+          </span>
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search your courses…"
-            className="pl-9"
+            placeholder="grep arsenal..."
+            aria-label="Search your courses"
+            className="border-primary/30 bg-card/40 pl-7 font-mono text-sm placeholder:text-muted-foreground/60"
           />
         </div>
       </div>
 
       {/* Grid */}
       {filtered.length === 0 ? (
-        <div className="mt-10 rounded-xl border border-dashed bg-muted/20 p-10 text-center text-sm text-muted-foreground">
-          No courses match your filter.
+        <div className="terminal-window mt-10 p-10 text-center font-mono text-sm text-muted-foreground">
+          <span className="text-destructive">!</span> no courses match the
+          current filter.
         </div>
       ) : (
         <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((enr, i) => {
             const course = courseMap[enr.courseId];
             if (!course) return null;
+            const cert = myCerts.find((c) => c.courseId === enr.courseId);
             return (
               <LearningCard
                 key={enr.id}
                 enrollment={enr}
                 index={i}
-                hasCertificate={myCerts.some((c) => c.courseId === enr.courseId)}
+                certificate={cert}
                 onContinue={(lessonId) =>
                   openLesson(course.slug, lessonId ?? enr.lastViewedLessonId ?? "")
                 }
                 onCourse={() => openCourse(course.slug)}
-                onCertificate={(certId) => openCertificate(certId)}
+                onCertificate={(verifyId) => openCertificate(verifyId)}
               />
             );
           })}
@@ -227,7 +271,7 @@ export function MyLearningView() {
 export default MyLearningView;
 
 // ---------------------------------------------------------------------------
-// Header
+// Header — MY_ARSENAL
 // ---------------------------------------------------------------------------
 function Header({
   stats,
@@ -235,48 +279,49 @@ function Header({
   stats: { enrolled: number; completed: number; inProgress: number; certs: number };
 }) {
   const cards = [
-    {
-      label: "Enrolled",
-      value: stats.enrolled,
-      icon: BookOpen,
-      tint: "text-primary",
-    },
-    {
-      label: "In progress",
-      value: stats.inProgress,
-      icon: TrendingUp,
-      tint: "text-amber-500",
-    },
-    {
-      label: "Completed",
-      value: stats.completed,
-      icon: CheckCircle2,
-      tint: "text-primary",
-    },
-    {
-      label: "Certificates",
-      value: stats.certs,
-      icon: Award,
-      tint: "text-amber-500",
-    },
+    { label: "enrolled", value: stats.enrolled, icon: BookOpen, tint: "text-primary" },
+    { label: "in_progress", value: stats.inProgress, icon: TrendingUp, tint: "text-amber-500" },
+    { label: "completed", value: stats.completed, icon: CheckCircle2, tint: "text-primary" },
+    { label: "certificates", value: stats.certs, icon: Award, tint: "text-amber-500" },
   ];
   return (
     <div>
-      <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">My Learning</h1>
-      <p className="mt-1 text-muted-foreground">
-        Pick up where you left off and keep your streak alive.
+      <Badge
+        variant="outline"
+        className="mb-3 border-primary/40 bg-primary/5 font-mono text-xs uppercase tracking-widest text-primary"
+      >
+        <Skull className="size-3" />
+        waynes // dashboard
+      </Badge>
+      <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
+        <span className="text-primary text-glow-green">&gt;</span>{" "}
+        <span className="text-gradient-brand">MY_ARSENAL</span>
+        <span className="cursor-blink" />
+      </h1>
+      <p className="mt-1 font-mono text-sm text-muted-foreground">
+        <span className="text-primary">$</span> your acquired exploits,
+        progress tracker, and earned certificates.
       </p>
       <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
         {cards.map((c) => {
           const Icon = c.icon;
           return (
-            <Card key={c.label} className="glass flex items-center gap-3 p-4">
-              <div className={cn("flex size-10 items-center justify-center rounded-lg bg-muted/60", c.tint)}>
+            <Card key={c.label} className="terminal-window flex items-center gap-3 p-4">
+              <div
+                className={cn(
+                  "grid size-10 place-items-center rounded-md border border-primary/20 bg-primary/5",
+                  c.tint
+                )}
+              >
                 <Icon className="size-5" />
               </div>
               <div>
-                <p className="text-2xl font-bold tabular-nums leading-none">{c.value}</p>
-                <p className="mt-1 text-xs text-muted-foreground">{c.label}</p>
+                <p className="font-mono text-2xl font-bold tabular-nums leading-none text-glow-green">
+                  {String(c.value).padStart(2, "0")}
+                </p>
+                <p className="mt-1 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                  {c.label}
+                </p>
               </div>
             </Card>
           );
@@ -292,14 +337,14 @@ function Header({
 function LearningCard({
   enrollment,
   index,
-  hasCertificate,
+  certificate,
   onContinue,
   onCourse,
   onCertificate,
 }: {
   enrollment: Enrollment;
   index: number;
-  hasCertificate: boolean;
+  certificate?: { verifyId: string } | undefined;
   onContinue: (lessonId?: string) => void;
   onCourse: () => void;
   onCertificate: (verifyId: string) => void;
@@ -307,12 +352,8 @@ function LearningCard({
   const course = courseMap[enrollment.courseId];
   const instructor = instructorMap[course.instructorId];
   const { lessonCount, duration } = courseStats(course);
-  const cert = useLms((s) =>
-    s.certificates.find(
-      (c) => c.userId === enrollment.userId && c.courseId === enrollment.courseId
-    )
-  );
   const pct = enrollment.progress;
+  const completedLessons = Math.round((pct / 100) * lessonCount);
 
   return (
     <motion.div
@@ -321,8 +362,20 @@ function LearningCard({
       transition={{ duration: 0.4, delay: Math.min(index * 0.05, 0.4) }}
       whileHover={{ y: -4 }}
     >
-      <Card className="group flex h-full flex-col overflow-hidden p-0 shadow-premium transition-shadow hover:shadow-glow">
-        {/* Thumbnail */}
+      <Card className="terminal-window group flex h-full flex-col overflow-hidden p-0 transition-shadow hover:glow-green">
+        {/* Window header */}
+        <div className="flex items-center gap-2 border-b border-primary/15 bg-primary/5 px-3 py-1.5">
+          <div className="flex gap-1.5">
+            <span className="size-2 rounded-full bg-destructive/70" />
+            <span className="size-2 rounded-full bg-amber-500/70" />
+            <span className="size-2 rounded-full bg-primary/70" />
+          </div>
+          <span className="ml-1 font-mono text-[10px] uppercase tracking-widest text-primary/80">
+            {enrollment.completed ? "cleared" : "active"}
+          </span>
+        </div>
+
+        {/* Thumbnail with scanlines */}
         <button
           onClick={onCourse}
           className="relative block aspect-video w-full overflow-hidden bg-muted"
@@ -333,25 +386,26 @@ function LearningCard({
             alt={course.title}
             className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+          <div className="scanlines pointer-events-none absolute inset-0" />
           <div className="absolute left-3 top-3">
             {enrollment.completed ? (
-              <Badge className="bg-primary/90 text-primary-foreground hover:bg-primary">
-                <CheckCircle2 className="size-3" /> Completed
+              <Badge className="border border-primary/40 bg-primary/20 font-mono text-[10px] uppercase tracking-widest text-primary backdrop-blur glow-green">
+                <CheckCircle2 className="size-3" /> COMPLETED ✓
               </Badge>
             ) : (
-              <Badge className="bg-amber-400/90 text-amber-950 hover:bg-amber-400">
-                <Clock className="size-3" /> In progress
+              <Badge className="border border-amber-500/40 bg-amber-500/20 font-mono text-[10px] uppercase tracking-widest text-amber-500 backdrop-blur">
+                <Clock className="size-3" /> IN PROGRESS
               </Badge>
             )}
           </div>
-          <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between text-xs text-white">
-            <span className="flex items-center gap-1 rounded-full bg-black/40 px-2 py-1 backdrop-blur">
-              <PlayCircle className="size-3" />
+          <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between font-mono text-[11px] text-white">
+            <span className="flex items-center gap-1 rounded-full bg-black/60 px-2 py-1 backdrop-blur">
+              <PlayCircle className="size-3 text-primary" />
               {lessonCount} lessons
             </span>
-            <span className="flex items-center gap-1 rounded-full bg-black/40 px-2 py-1 backdrop-blur">
-              <Clock className="size-3" />
+            <span className="flex items-center gap-1 rounded-full bg-black/60 px-2 py-1 backdrop-blur">
+              <Clock className="size-3 text-primary" />
               {formatDuration(duration)}
             </span>
           </div>
@@ -361,73 +415,83 @@ function LearningCard({
         <div className="flex flex-1 flex-col gap-3 p-4">
           <button
             onClick={onCourse}
-            className="text-left text-base font-semibold leading-snug line-clamp-2 transition-colors hover:text-primary"
+            className="text-left font-mono text-base font-semibold leading-snug line-clamp-2 transition-colors hover:text-primary"
           >
             {course.title}
           </button>
 
           {instructor && (
             <div className="flex items-center gap-2">
-              <Avatar className="size-6">
+              <Avatar className="size-6 border border-primary/30">
                 <AvatarImage src={instructor.avatar} alt={instructor.name} />
                 <AvatarFallback>{instructor.name.charAt(0)}</AvatarFallback>
               </Avatar>
-              <span className="text-xs text-muted-foreground">{instructor.name}</span>
+              <span className="font-mono text-xs text-muted-foreground">
+                <span className="text-primary">@</span> {instructor.name}
+              </span>
             </div>
           )}
 
           {/* Progress */}
           <div className="mt-1">
-            <div className="mb-1.5 flex items-center justify-between text-xs">
-              <span className="font-medium">
-                {enrollment.completed ? "Completed" : "Progress"}
+            <div className="mb-1.5 flex items-center justify-between font-mono text-xs">
+              <span className="text-muted-foreground">
+                <span className="text-primary">$</span> progress
               </span>
-              <span className="tabular-nums text-muted-foreground">{pct}%</span>
+              <span className="tabular-nums text-primary">
+                {completedLessons}/{lessonCount} · {pct}%
+              </span>
             </div>
             <Progress
               value={pct}
-              className={cn(enrollment.completed && "[&_>div]:bg-primary")}
+              className={cn(
+                "h-1.5 [&>div]:bg-primary",
+                enrollment.completed && "[&>div]:glow-green"
+              )}
             />
           </div>
 
           {/* Last viewed */}
           {enrollment.lastViewedAt && !enrollment.completed && (
-            <p className="text-xs text-muted-foreground">
-              Last viewed {timeAgo(enrollment.lastViewedAt)}
+            <p className="font-mono text-[11px] text-muted-foreground">
+              <span className="text-primary">&gt;</span> last active{" "}
+              {timeAgo(enrollment.lastViewedAt)}
             </p>
           )}
 
           {/* Actions */}
-          <div className="mt-auto flex flex-wrap items-center gap-2 border-t pt-3">
+          <div className="mt-auto flex flex-wrap items-center gap-2 border-t border-primary/15 pt-3">
             {enrollment.completed ? (
               <>
                 <Button
                   size="sm"
                   variant="outline"
-                  className="flex-1"
+                  className="flex-1 gap-2 border-primary/30 font-mono uppercase tracking-widest text-primary"
                   onClick={() => onContinue()}
                 >
                   <PlayCircle className="size-4" />
-                  Review
+                  REVIEW
                 </Button>
-                {cert && (
+                {certificate && (
                   <Button
                     size="sm"
-                    onClick={() => onCertificate(cert.verifyId)}
+                    onClick={() => onCertificate(certificate.verifyId)}
+                    className="glow-green gap-2 font-mono uppercase tracking-widest"
                   >
                     <Award className="size-4" />
-                    Certificate
+                    CERT
                   </Button>
                 )}
               </>
             ) : (
               <Button
                 size="sm"
-                className="flex-1"
+                className="glow-green flex-1 gap-2 font-mono uppercase tracking-widest"
                 onClick={() => onContinue(enrollment.lastViewedLessonId)}
               >
-                <PlayCircle className="size-4" />
-                Continue
+                <Zap className="size-4" />
+                CONTINUE
+                <Check className="size-4" />
               </Button>
             )}
           </div>
@@ -446,15 +510,20 @@ function OrdersList({ orders }: { orders: Order[] }) {
   );
   return (
     <div className="mt-12">
-      <div className="mb-4 flex items-center gap-2">
+      <div className="mb-4 flex items-center gap-2 border-b border-primary/15 pb-3">
         <FileText className="size-5 text-primary" />
-        <h2 className="text-xl font-semibold">Your orders</h2>
-        <Badge variant="secondary" className="font-medium">
+        <h2 className="font-mono text-sm font-semibold uppercase tracking-widest text-primary">
+          {"// transaction_log"}
+        </h2>
+        <Badge
+          variant="outline"
+          className="border-primary/30 font-mono text-xs text-primary"
+        >
           {orders.length}
         </Badge>
       </div>
-      <Card className="overflow-hidden p-0 shadow-premium">
-        <div className="divide-y">
+      <Card className="terminal-window overflow-hidden p-0">
+        <div className="divide-y divide-primary/10">
           {sorted.map((o) => (
             <div
               key={o.id}
@@ -467,32 +536,39 @@ function OrdersList({ orders }: { orders: Order[] }) {
                     alt={o.courseTitle}
                     className="absolute inset-0 h-full w-full object-cover"
                   />
+                  <div className="scanlines pointer-events-none absolute inset-0" />
                 </div>
                 <div className="min-w-0">
-                  <p className="line-clamp-1 text-sm font-semibold">{o.courseTitle}</p>
-                  <p className="text-xs text-muted-foreground">
-                    <span className="font-mono">{o.orderNumber}</span>
-                    <span className="mx-1.5">·</span>
+                  <p className="line-clamp-1 font-mono text-sm font-semibold">
+                    {o.courseTitle}
+                  </p>
+                  <p className="font-mono text-xs text-muted-foreground">
+                    <span className="text-primary">$</span> {o.orderNumber}
+                    <span className="mx-1.5 text-primary/40">|</span>
                     {formatDateTime(o.createdAt)}
                   </p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
                 <div className="text-right">
-                  <p className="text-sm font-semibold">
+                  <p className="font-mono text-sm font-semibold text-primary">
                     {formatPrice(o.finalAmount, o.currency)}
                   </p>
                   {o.discount > 0 && (
-                    <p className="text-xs text-primary">
-                      saved {formatPrice(o.discount, o.currency)}
+                    <p className="font-mono text-xs text-primary">
+                      <span className="text-muted-foreground">saved</span>{" "}
+                      {formatPrice(o.discount, o.currency)}
                     </p>
                   )}
                 </div>
                 <Badge
                   variant="outline"
-                  className={cn("font-medium capitalize", ORDER_STATUS_STYLES[o.status])}
+                  className={cn(
+                    "font-mono text-[10px] uppercase tracking-widest",
+                    ORDER_STATUS_STYLES[o.status]
+                  )}
                 >
-                  {o.status.toLowerCase()}
+                  {ORDER_STATUS_LABEL[o.status]}
                 </Badge>
               </div>
             </div>

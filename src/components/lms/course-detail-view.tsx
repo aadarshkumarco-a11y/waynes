@@ -6,29 +6,31 @@ import {
   ArrowLeft,
   ArrowRight,
   Award,
-  BarChart3,
   BookOpen,
-  Briefcase,
-  BrainCircuit,
+  Bug,
   Calendar,
+  Check,
   CheckCircle2,
   Clock,
   Code2,
+  Cpu,
   Download,
   FileText,
-  Globe2,
-  GraduationCap,
+  Globe,
   Infinity as InfinityIcon,
   Lock,
-  Megaphone,
-  Palette,
+  Network,
   PlayCircle,
+  Search,
   ShieldCheck,
-  ShoppingCart,
+  Skull,
   Sparkles,
   Star,
+  Swords,
+  Terminal,
   Trash2,
   Users,
+  X,
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -74,48 +76,55 @@ import { cn } from "@/lib/utils";
 // Icon helpers
 // ---------------------------------------------------------------------------
 const CATEGORY_ICONS: Record<string, LucideIcon> = {
-  Code2,
-  BarChart3,
-  Palette,
-  BrainCircuit,
-  Megaphone,
-  Briefcase,
+  Globe,
+  Network,
+  Bug,
+  Cpu,
+  Swords,
+  Search,
 };
 
 function CategoryIcon({ name, className }: { name: string; className?: string }) {
-  const Icon = CATEGORY_ICONS[name] ?? Code2;
+  const Icon = CATEGORY_ICONS[name] ?? Terminal;
   return <Icon className={className} />;
 }
 
 const LESSON_TYPE_ICONS: Record<LessonType, LucideIcon> = {
   VIDEO: PlayCircle,
   PDF: FileText,
-  TEXT: BookOpen,
+  TEXT: Code2,
   DOWNLOAD: Download,
 };
 
 // ---------------------------------------------------------------------------
-// Section heading
+// Section heading — terminal style
 // ---------------------------------------------------------------------------
 function SectionTitle({
   icon: Icon,
+  label,
   children,
 }: {
   icon: LucideIcon;
+  label: string;
   children: React.ReactNode;
 }) {
   return (
-    <div className="mb-5 flex items-center gap-2.5">
-      <span className="grid size-8 place-items-center rounded-lg bg-primary/10 text-primary">
+    <div className="mb-5 flex items-center gap-2.5 border-b border-primary/15 pb-3">
+      <span className="grid size-8 place-items-center rounded-md border border-primary/30 bg-primary/5 text-primary">
         <Icon className="size-4" />
       </span>
-      <h2 className="text-xl font-bold tracking-tight sm:text-2xl">{children}</h2>
+      <div className="flex flex-col">
+        <span className="font-mono text-[10px] uppercase tracking-widest text-primary/70">
+          {label}
+        </span>
+        <h2 className="text-xl font-bold tracking-tight sm:text-2xl">{children}</h2>
+      </div>
     </div>
   );
 }
 
 // ---------------------------------------------------------------------------
-// Purchase card (shared, used in desktop sticky sidebar)
+// Purchase card — terminal window style (desktop sticky + mobile bottom)
 // ---------------------------------------------------------------------------
 function PurchaseCard({
   course,
@@ -155,26 +164,39 @@ function PurchaseCard({
   ];
 
   return (
-    <Card className={cn("overflow-hidden shadow-premium", className)}>
+    <Card className={cn("terminal-window overflow-hidden", className)}>
+      {/* Window header */}
+      <div className="flex items-center gap-2 border-b border-primary/15 bg-primary/5 px-4 py-2">
+        <div className="flex gap-1.5">
+          <span className="size-2.5 rounded-full bg-destructive/70" />
+          <span className="size-2.5 rounded-full bg-amber-500/70" />
+          <span className="size-2.5 rounded-full bg-primary/70" />
+        </div>
+        <span className="ml-2 font-mono text-[11px] uppercase tracking-widest text-primary/80">
+          enroll.sh
+        </span>
+      </div>
+
       {/* Thumbnail */}
       <div className="relative aspect-video w-full overflow-hidden bg-muted">
         <img
           src={course.thumbnail}
           alt={course.title}
-          className="size-full object-cover"
+          className="absolute inset-0 h-full w-full object-cover"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+        <div className="scanlines pointer-events-none absolute inset-0" />
         <div className="absolute inset-0 flex items-center justify-center">
           <button
-            className="grid size-14 place-items-center rounded-full bg-white/90 text-primary shadow-lg backdrop-blur transition-transform hover:scale-105"
+            className="grid size-14 place-items-center rounded-full border border-primary/40 bg-black/60 text-primary backdrop-blur transition-transform hover:scale-105 glow-green"
             aria-label="Watch preview"
           >
             <PlayCircle className="size-7" />
           </button>
         </div>
-        <Badge className="absolute left-3 top-3 gap-1 bg-black/60 text-white backdrop-blur hover:bg-black/60">
+        <Badge className="absolute left-3 top-3 gap-1 border border-primary/40 bg-black/70 font-mono text-[10px] uppercase tracking-widest text-primary backdrop-blur hover:bg-black/70">
           <PlayCircle className="size-3" />
-          Preview this course
+          preview
         </Badge>
       </div>
 
@@ -182,68 +204,94 @@ function PurchaseCard({
         {/* Price */}
         <div className="flex flex-col gap-1">
           <div className="flex items-end gap-2">
-            <span className="text-3xl font-bold tracking-tight">
+            <span className="font-mono text-3xl font-bold tracking-tight text-glow-green">
               {formatPrice(course.price, course.currency)}
             </span>
             {course.comparePrice && (
-              <span className="pb-1 text-sm text-muted-foreground line-through">
+              <span className="pb-1 font-mono text-sm text-muted-foreground line-through">
                 {formatPrice(course.comparePrice, course.currency)}
               </span>
             )}
             {discount > 0 && (
-              <Badge className="mb-1 ml-auto gap-1 bg-rose-500/90 text-white hover:bg-rose-500">
+              <Badge className="mb-1 ml-auto gap-1 border border-destructive/40 bg-destructive/15 font-mono text-destructive">
                 -{discount}%
               </Badge>
             )}
           </div>
           {discount > 0 && (
-            <p className="text-xs text-muted-foreground">
-              You save{" "}
-              <span className="font-semibold text-foreground">
+            <p className="font-mono text-xs text-muted-foreground">
+              <span className="text-primary">$</span> you_save{" "}
+              <span className="font-semibold text-primary">
                 {formatPrice(course.comparePrice! - course.price, course.currency)}
-              </span>{" "}
-              — limited time offer
+              </span>
             </p>
           )}
         </div>
 
         {/* Progress (if enrolled) */}
         {enrolled && typeof progress === "number" && (
-          <div className="rounded-lg border bg-primary/5 p-3">
-            <div className="mb-1.5 flex items-center justify-between text-xs">
-              <span className="font-medium text-primary">Your progress</span>
-              <span className="font-semibold tabular-nums">{progress}%</span>
+          <div className="rounded-md border border-primary/30 bg-primary/5 p-3">
+            <div className="mb-1.5 flex items-center justify-between font-mono text-xs">
+              <span className="text-primary">$ progress</span>
+              <span className="font-semibold tabular-nums text-primary">{progress}%</span>
             </div>
-            <Progress value={progress} className="h-1.5" />
+            <Progress
+              value={progress}
+              className="h-1.5 [&>div]:bg-primary [&>div]:glow-green"
+            />
           </div>
         )}
 
         {/* CTAs */}
         <div className="flex flex-col gap-2">
           {enrolled ? (
-            <Button size="lg" className="w-full gap-2" onClick={onContinue}>
+            <Button
+              size="lg"
+              onClick={onContinue}
+              className="glow-green gap-2 font-mono uppercase tracking-widest"
+            >
               <PlayCircle className="size-4" />
               {progress && progress > 0 ? "Continue Learning" : "Go to Course"}
+              <ArrowRight className="size-4" />
             </Button>
           ) : inCart ? (
             <>
-              <Button size="lg" className="w-full gap-2" onClick={onCheckout}>
-                <ShoppingCart className="size-4" />
+              <Button
+                size="lg"
+                onClick={onCheckout}
+                className="glow-green gap-2 font-mono uppercase tracking-widest"
+              >
+                <Terminal className="size-4" />
                 In Cart — Checkout
               </Button>
-              <Button size="sm" variant="ghost" className="w-full gap-2 text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={onRemove}>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="w-full gap-2 font-mono text-destructive hover:bg-destructive/10 hover:text-destructive"
+                onClick={onRemove}
+              >
                 <Trash2 className="size-4" />
-                Remove from cart
+                remove_from_cart
               </Button>
             </>
           ) : (
             <>
-              <Button size="lg" className="w-full gap-2" onClick={onBuyNow}>
+              <Button
+                size="lg"
+                onClick={onBuyNow}
+                className="glow-green gap-2 font-mono uppercase tracking-widest"
+              >
                 <Sparkles className="size-4" />
                 Buy Now
+                <ArrowRight className="size-4" />
               </Button>
-              <Button size="lg" variant="outline" className="w-full gap-2" onClick={onAddToCart}>
-                <ShoppingCart className="size-4" />
+              <Button
+                size="lg"
+                variant="outline"
+                onClick={onAddToCart}
+                className="gap-2 border-primary/30 font-mono uppercase tracking-widest text-primary hover:bg-primary/10"
+              >
+                <Terminal className="size-4" />
                 Add to Cart
               </Button>
             </>
@@ -252,18 +300,18 @@ function PurchaseCard({
 
         {/* Money-back note */}
         {!enrolled && (
-          <p className="flex items-center justify-center gap-1.5 text-center text-[11px] text-muted-foreground">
+          <p className="flex items-center justify-center gap-1.5 text-center font-mono text-[11px] text-muted-foreground">
             <ShieldCheck className="size-3.5 text-primary" />
             30-day money-back guarantee
           </p>
         )}
 
-        <Separator />
+        <Separator className="bg-primary/15" />
 
         {/* Includes */}
         <div>
-          <p className="mb-2.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            This course includes
+          <p className="mb-2.5 font-mono text-xs font-semibold uppercase tracking-widest text-primary/80">
+            {"// includes"}
           </p>
           <ul className="flex flex-col gap-2">
             {includes.map((item) => (
@@ -280,25 +328,41 @@ function PurchaseCard({
 }
 
 // ---------------------------------------------------------------------------
-// Not found state
+// Not found state — terminal 404
 // ---------------------------------------------------------------------------
 function CourseNotFound() {
   const navigate = useLms((s) => s.navigate);
   return (
-    <div className="mx-auto flex min-h-[70vh] w-full max-w-3xl flex-col items-center justify-center px-4 py-16 text-center">
-      <div className="grid size-20 place-items-center rounded-full bg-muted text-muted-foreground">
-        <BookOpen className="size-9" />
-      </div>
-      <h1 className="mt-6 text-2xl font-bold tracking-tight sm:text-3xl">
-        Course not found
-      </h1>
-      <p className="mt-2 max-w-md text-sm text-muted-foreground">
-        The course you&apos;re looking for may have been removed or is no longer available. Browse our catalog to discover more courses.
-      </p>
-      <Button className="mt-6 gap-2" onClick={() => navigate("catalog")}>
-        <ArrowLeft className="size-4" />
-        Back to Catalog
-      </Button>
+    <div className="relative mx-auto flex min-h-[70vh] w-full max-w-3xl flex-col items-center justify-center px-4 py-16 text-center">
+      <div className="pointer-events-none absolute inset-0 -z-10 bg-grid opacity-30" />
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.4 }}
+        className="terminal-window px-8 py-12"
+      >
+        <div className="mb-4 flex size-16 items-center justify-center rounded-full border border-destructive/40 bg-destructive/5 text-destructive glow-red">
+          <Skull className="size-9" />
+        </div>
+        <p className="font-mono text-xs uppercase tracking-widest text-destructive">
+          error 404
+        </p>
+        <h1 className="mt-2 text-2xl font-bold tracking-tight text-glow-red sm:text-3xl">
+          404: TARGET NOT FOUND
+        </h1>
+        <p className="mt-3 max-w-md font-mono text-sm text-muted-foreground">
+          <span className="text-destructive">$</span> the requested course does
+          not exist in the database. it may have been removed, renamed, or
+          never existed.
+        </p>
+        <Button
+          className="mt-6 gap-2 font-mono uppercase tracking-widest"
+          onClick={() => navigate("catalog")}
+        >
+          <ArrowLeft className="size-4" />
+          &lt; back_to_catalog
+        </Button>
+      </motion.div>
     </div>
   );
 }
@@ -336,8 +400,7 @@ export function CourseDetailView() {
     return course.sections[0]?.lessons[0] ?? null;
   }, [course]);
 
-  const continueLessonId =
-    enrollment?.lastViewedLessonId ?? firstLesson?.id ?? null;
+  const continueLessonId = enrollment?.lastViewedLessonId ?? firstLesson?.id ?? null;
 
   // Reviews: prefer ones for this course, fall back to all featured
   const courseReviews = useMemo(() => {
@@ -359,15 +422,11 @@ export function CourseDetailView() {
     cb();
   };
 
-  const handleAddToCart = () => {
-    addToCart(course.id);
-  };
+  const handleAddToCart = () => addToCart(course.id);
   const handleBuyNow = () => requireAuth(() => openCheckout(course.id));
   const handleCheckout = () => requireAuth(() => openCheckout(course.id));
   const handleContinue = () => {
-    if (continueLessonId) {
-      openLesson(course.slug, continueLessonId);
-    }
+    if (continueLessonId) openLesson(course.slug, continueLessonId);
   };
 
   const discount = course.comparePrice
@@ -390,495 +449,421 @@ export function CourseDetailView() {
           ) : (
             <div className="size-full bg-gradient-to-br from-primary/30 to-primary/5" />
           )}
-          <div className="absolute inset-0 bg-gradient-to-b from-background/85 via-background/75 to-background" />
-          <div className="absolute inset-0 bg-grid opacity-30" />
+          <div className="absolute inset-0 bg-gradient-to-b from-background/90 via-background/80 to-background" />
+          <div className="absolute inset-0 bg-grid opacity-40" />
+          <div className="absolute left-1/3 top-0 size-72 -translate-x-1/2 rounded-full bg-primary/10 blur-[120px]" />
         </div>
 
         <div className="mx-auto w-full max-w-7xl px-4 pb-10 pt-8 sm:px-6 sm:pt-12 lg:px-8">
           {/* Breadcrumb */}
           <Breadcrumb className="mb-6">
-            <BreadcrumbList className="text-xs">
+            <BreadcrumbList className="font-mono text-xs">
               <BreadcrumbItem>
                 <BreadcrumbLink asChild>
-                  <button onClick={() => navigate("home")} className="hover:text-foreground">
-                    Home
+                  <button onClick={() => navigate("home")} className="hover:text-primary">
+                    ~ /home
                   </button>
                 </BreadcrumbLink>
               </BreadcrumbItem>
-              <BreadcrumbSeparator />
+              <BreadcrumbSeparator className="text-primary/40" />
               <BreadcrumbItem>
                 <BreadcrumbLink asChild>
-                  <button onClick={() => navigate("catalog")} className="hover:text-foreground">
-                    Catalog
+                  <button onClick={() => navigate("catalog")} className="hover:text-primary">
+                    catalog
                   </button>
                 </BreadcrumbLink>
               </BreadcrumbItem>
               {category && (
                 <>
-                  <BreadcrumbSeparator />
+                  <BreadcrumbSeparator className="text-primary/40" />
                   <BreadcrumbItem>
                     <BreadcrumbLink asChild>
-                      <button onClick={() => navigate("catalog")} className="hover:text-foreground">
-                        {category.name}
+                      <button onClick={() => navigate("catalog")} className="hover:text-primary">
+                        {category.slug}
                       </button>
                     </BreadcrumbLink>
                   </BreadcrumbItem>
                 </>
               )}
-              <BreadcrumbSeparator />
+              <BreadcrumbSeparator className="text-primary/40" />
               <BreadcrumbItem>
-                <BreadcrumbPage className="line-clamp-1 max-w-[180px] sm:max-w-xs">
-                  {course.title}
+                <BreadcrumbPage className="line-clamp-1 max-w-[180px] text-primary sm:max-w-xs">
+                  {course.slug}
                 </BreadcrumbPage>
               </BreadcrumbItem>
             </BreadcrumbList>
           </Breadcrumb>
 
-          <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1.4fr_1fr]">
-            {/* Left: title, rating, stats */}
-            <AnimatedReveal>
-              <div className="flex flex-col gap-5">
-                <div className="flex flex-wrap items-center gap-2">
-                  {course.featured && (
-                    <Badge className="gap-1 bg-amber-400/90 text-amber-950 hover:bg-amber-400">
-                      <Star className="size-3 fill-current" />
-                      Featured
-                    </Badge>
-                  )}
-                  {category && (
-                    <Badge variant="secondary" className="gap-1.5">
-                      <CategoryIcon name={category.icon} className="size-3" />
-                      {category.name}
-                    </Badge>
-                  )}
-                  <Badge variant="outline" className="font-medium">
-                    {course.level.charAt(0) + course.level.slice(1).toLowerCase()}
+          <AnimatedReveal>
+            <div className="flex flex-col gap-5">
+              <div className="flex flex-wrap items-center gap-2">
+                {course.featured && (
+                  <Badge className="gap-1 border border-primary/40 bg-primary/15 font-mono text-primary glow-green">
+                    <Star className="size-3 fill-current" />
+                    FEATURED
                   </Badge>
-                </div>
-
-                <h1 className="text-3xl font-bold leading-tight tracking-tight text-balance sm:text-4xl lg:text-[2.75rem]">
-                  {course.title}
-                </h1>
-                <p className="max-w-2xl text-base text-muted-foreground sm:text-lg">
-                  {course.subtitle}
-                </p>
-
-                {/* Rating + students */}
-                <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
-                  <div className="flex items-center gap-2">
-                    <span className="text-lg font-bold text-amber-500">
-                      {course.rating.toFixed(1)}
-                    </span>
-                    <StarRating rating={course.rating} size={16} />
-                    <span className="text-muted-foreground">
-                      ({formatNumber(course.reviewCount)} reviews)
-                    </span>
-                  </div>
-                  <span className="flex items-center gap-1.5 text-muted-foreground">
-                    <Users className="size-4" />
-                    {formatNumber(course.studentCount)} students
-                  </span>
-                </div>
-
-                {/* Instructor mini */}
-                {instructor && (
-                  <div className="flex items-center gap-3 rounded-xl border bg-card/60 p-3 backdrop-blur sm:inline-flex sm:w-fit">
-                    <Avatar className="size-10 border">
-                      <AvatarImage src={instructor.avatar} alt={instructor.name} />
-                      <AvatarFallback>{instructor.name.charAt(0)}</AvatarFallback>
-                    </Avatar>
-                    <div className="flex flex-col">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-sm font-semibold">{instructor.name}</span>
-                        <CheckCircle2 className="size-3.5 text-primary" />
-                      </div>
-                      <span className="text-xs text-muted-foreground">{instructor.title}</span>
-                    </div>
-                  </div>
                 )}
-
-                {/* Stats row */}
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-5">
-                  {[
-                    { icon: BookOpen, label: "Lessons", value: String(lessonCount) },
-                    { icon: Clock, label: "Duration", value: formatDuration(duration) },
-                    { icon: BarChart3, label: "Level", value: course.level.charAt(0) + course.level.slice(1).toLowerCase() },
-                    { icon: Globe2, label: "Language", value: course.language },
-                    { icon: Calendar, label: "Updated", value: formatDate(course.updatedAt) },
-                  ].map((stat) => (
-                    <div
-                      key={stat.label}
-                      className="flex flex-col gap-1 rounded-lg border bg-card/60 p-3 backdrop-blur"
-                    >
-                      <stat.icon className="size-4 text-primary" />
-                      <span className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                        {stat.label}
-                      </span>
-                      <span className="text-sm font-semibold">{stat.value}</span>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Last updated + tags */}
-                <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                  <span className="flex items-center gap-1">
-                    <Sparkles className="size-3" />
-                    Tags:
-                  </span>
-                  {course.tags.map((t) => (
-                    <Badge key={t} variant="secondary" className="px-2 py-0.5 text-[10px] font-medium">
-                      {t}
-                    </Badge>
-                  ))}
-                </div>
+                {category && (
+                  <Badge
+                    variant="outline"
+                    className="gap-1.5 border-primary/30 font-mono text-primary"
+                  >
+                    <CategoryIcon name={category.icon} className="size-3" />
+                    {category.name}
+                  </Badge>
+                )}
+                <Badge
+                  variant="outline"
+                  className="border-primary/30 font-mono uppercase tracking-widest"
+                >
+                  {course.level}
+                </Badge>
               </div>
-            </AnimatedReveal>
 
-            {/* Right: mobile/tablet purchase card (desktop uses sticky) */}
-            <div className="lg:hidden">
-              <AnimatedReveal delay={120}>
-                <PurchaseCard
-                  course={course}
-                  onAddToCart={handleAddToCart}
-                  onBuyNow={handleBuyNow}
-                  onCheckout={handleCheckout}
-                  onRemove={() => removeFromCart(course.id)}
-                  onContinue={handleContinue}
-                  enrolled={enrolled}
-                  inCart={inCart}
-                  progress={progress}
-                />
-              </AnimatedReveal>
+              <h1 className="text-3xl font-bold leading-tight tracking-tight text-balance sm:text-4xl lg:text-[2.75rem]">
+                <span className="text-primary text-glow-green">&gt;</span>{" "}
+                <span className="text-gradient-brand">{course.title}</span>
+              </h1>
+              <p className="max-w-2xl text-base text-muted-foreground sm:text-lg">
+                {course.subtitle}
+              </p>
+
+              {/* Rating + students */}
+              <div className="flex flex-wrap items-center gap-x-5 gap-y-2 font-mono text-sm">
+                <div className="flex items-center gap-2">
+                  <span className="text-lg font-bold text-primary text-glow-green">
+                    {course.rating.toFixed(1)}
+                  </span>
+                  <StarRating rating={course.rating} size={16} />
+                  <span className="text-muted-foreground">
+                    ({formatNumber(course.reviewCount)} reviews)
+                  </span>
+                </div>
+                <span className="flex items-center gap-1.5 text-muted-foreground">
+                  <Users className="size-4 text-primary" />
+                  {formatNumber(course.studentCount)} students
+                </span>
+              </div>
+
+              {/* Instructor mini */}
+              {instructor && (
+                <div className="terminal-window inline-flex w-full items-center gap-3 p-3 sm:w-fit">
+                  <Avatar className="size-10 border border-primary/30">
+                    <AvatarImage src={instructor.avatar} alt={instructor.name} />
+                    <AvatarFallback>{instructor.name.charAt(0)}</AvatarFallback>
+                  </Avatar>
+                  <div className="flex flex-col">
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-mono text-sm font-semibold text-primary">
+                        {instructor.name}
+                      </span>
+                      <CheckCircle2 className="size-3.5 text-primary" />
+                    </div>
+                    <span className="font-mono text-xs text-muted-foreground">
+                      {instructor.title}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Stats row */}
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+                {[
+                  { icon: BookOpen, label: "lessons", value: String(lessonCount) },
+                  { icon: Clock, label: "duration", value: formatDuration(duration) },
+                  { icon: Terminal, label: "level", value: course.level },
+                  { icon: Globe, label: "lang", value: course.language },
+                  { icon: Calendar, label: "updated", value: formatDate(course.updatedAt) },
+                ].map((stat) => (
+                  <div
+                    key={stat.label}
+                    className="terminal-window flex flex-col gap-1 p-3"
+                  >
+                    <stat.icon className="size-4 text-primary" />
+                    <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                      {stat.label}
+                    </span>
+                    <span className="font-mono text-sm font-semibold">{stat.value}</span>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
+          </AnimatedReveal>
         </div>
       </section>
 
-      {/* ===================== MAIN BODY ===================== */}
-      <div className="mx-auto grid w-full max-w-7xl grid-cols-1 gap-10 px-4 py-12 sm:px-6 lg:grid-cols-[1.7fr_1fr] lg:px-8">
-        {/* LEFT: content sections */}
-        <div className="flex min-w-0 flex-col gap-12">
-          {/* What you'll learn */}
-          <AnimatedReveal>
-            <section aria-labelledby="learn-h">
-              <SectionTitle icon={GraduationCap}>
-                <span id="learn-h">What you&apos;ll learn</span>
-              </SectionTitle>
-              <div className="grid grid-cols-1 gap-3 rounded-2xl border bg-card/50 p-5 sm:p-6 md:grid-cols-2">
-                {course.benefits.map((b, i) => (
-                  <motion.div
-                    key={b}
-                    initial={{ opacity: 0, x: -8 }}
-                    whileInView={{ opacity: 1, x: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ delay: Math.min(i * 0.05, 0.4) }}
-                    className="flex items-start gap-2.5"
-                  >
-                    <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-primary" />
-                    <span className="text-sm leading-relaxed text-foreground/90">{b}</span>
-                  </motion.div>
-                ))}
-              </div>
-            </section>
-          </AnimatedReveal>
-
-          {/* Course content */}
-          <AnimatedReveal>
-            <section aria-labelledby="content-h">
-              <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
-                <div>
-                  <SectionTitle icon={BookOpen}>
-                    <span id="content-h">Course content</span>
-                  </SectionTitle>
-                  <p className="-mt-3 text-sm text-muted-foreground">
-                    {course.sections.length} sections · {lessonCount} lessons ·{" "}
-                    {formatDuration(duration)} total
-                  </p>
+      {/* ===================== BODY ===================== */}
+      <div className="mx-auto w-full max-w-7xl px-4 pb-32 sm:px-6 lg:pb-16 lg:px-8">
+        <div className="grid grid-cols-1 gap-10 lg:grid-cols-[1.4fr_1fr]">
+          {/* Left content column */}
+          <div className="flex flex-col gap-12">
+            {/* WHAT YOU WILL LEARN */}
+            <AnimatedReveal>
+              <section aria-label="What you will learn">
+                <SectionTitle icon={Sparkles} label="// what_you_will_learn">
+                  What You Will Learn
+                </SectionTitle>
+                <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+                  {course.benefits.map((b, i) => (
+                    <motion.div
+                      key={i}
+                      initial={{ opacity: 0, x: -8 }}
+                      whileInView={{ opacity: 1, x: 0 }}
+                      viewport={{ once: true }}
+                      transition={{ delay: Math.min(i * 0.04, 0.3) }}
+                      className="flex items-start gap-2.5 rounded-md border border-primary/10 bg-card/40 p-3"
+                    >
+                      <Check className="mt-0.5 size-4 shrink-0 text-primary" />
+                      <span className="text-sm text-foreground/90">{b}</span>
+                    </motion.div>
+                  ))}
                 </div>
-              </div>
+              </section>
+            </AnimatedReveal>
 
-              <div className="overflow-hidden rounded-2xl border bg-card">
-                <Accordion type="multiple" defaultValue={[course.sections[0]?.id].filter(Boolean) as string[]}>
-                  {course.sections.map((section) => {
-                    const secLessons = section.lessons.length;
-                    const secDuration = section.lessons.reduce((n, l) => n + l.durationMins, 0);
-                    return (
-                      <AccordionItem key={section.id} value={section.id} className="border-b last:border-b-0">
-                        <AccordionTrigger className="px-5 py-4 hover:no-underline">
-                          <div className="flex flex-1 flex-col gap-1 pr-3 text-left">
-                            <span className="text-sm font-semibold sm:text-base">{section.title}</span>
-                            <span className="text-xs font-normal text-muted-foreground">
-                              {secLessons} {secLessons === 1 ? "lesson" : "lessons"} · {formatDuration(secDuration)}
-                            </span>
-                          </div>
-                        </AccordionTrigger>
-                        <AccordionContent className="pb-0">
-                          <ul className="divide-y border-t">
-                            {section.lessons.map((lesson) => {
-                              const Icon = LESSON_TYPE_ICONS[lesson.type];
-                              const locked = !lesson.preview && !enrolled;
-                              const clickable = lesson.preview || enrolled;
-                              return (
-                                <li key={lesson.id}>
-                                  <button
-                                    type="button"
-                                    disabled={!clickable}
-                                    onClick={() => clickable && openLesson(course.slug, lesson.id)}
+            {/* CURRICULUM */}
+            <AnimatedReveal>
+              <section aria-label="Curriculum">
+                <SectionTitle icon={Terminal} label="// curriculum">
+                  Curriculum
+                </SectionTitle>
+                <div className="terminal-window p-0">
+                  <div className="flex items-center justify-between border-b border-primary/15 px-4 py-3 font-mono text-xs">
+                    <span className="text-primary">
+                      $ tree --lessons={lessonCount}
+                    </span>
+                    <span className="text-muted-foreground">
+                      {course.sections.length} sections · {formatDuration(duration)}
+                    </span>
+                  </div>
+                  <Accordion type="multiple" className="w-full" defaultValue={[course.sections[0]?.id ?? ""]}>
+                    {course.sections.map((section, idx) => {
+                      const sectionLessons = section.lessons.length;
+                      const sectionDuration = section.lessons.reduce(
+                        (n, l) => n + l.durationMins,
+                        0
+                      );
+                      return (
+                        <AccordionItem
+                          key={section.id}
+                          value={section.id}
+                          className="border-b border-primary/15 last:border-0"
+                        >
+                          <AccordionTrigger className="px-4 py-3 font-mono text-sm hover:bg-primary/5 hover:no-underline [&>svg]:text-primary">
+                            <div className="flex flex-1 items-center gap-3 text-left">
+                              <span className="grid size-7 shrink-0 place-items-center rounded border border-primary/30 bg-primary/5 font-mono text-xs text-primary">
+                                {String(idx + 1).padStart(2, "0")}
+                              </span>
+                              <div className="flex min-w-0 flex-1 flex-col">
+                                <span className="truncate font-semibold text-foreground">
+                                  {section.title}
+                                </span>
+                                <span className="text-xs text-muted-foreground">
+                                  {sectionLessons} lessons · {formatDuration(sectionDuration)}
+                                </span>
+                              </div>
+                            </div>
+                          </AccordionTrigger>
+                          <AccordionContent className="pb-0">
+                            <ul className="flex flex-col">
+                              {section.lessons.map((lesson) => {
+                                const Icon = LESSON_TYPE_ICONS[lesson.type];
+                                const canPlay = lesson.preview || enrolled;
+                                return (
+                                  <li
+                                    key={lesson.id}
                                     className={cn(
-                                      "flex w-full items-center gap-3 px-5 py-3 text-left transition-colors",
-                                      clickable
-                                        ? "cursor-pointer hover:bg-accent/50"
-                                        : "cursor-default"
+                                      "flex items-center gap-3 border-t border-primary/10 px-4 py-2.5 font-mono text-sm transition-colors",
+                                      canPlay
+                                        ? "cursor-pointer hover:bg-primary/5"
+                                        : "opacity-60"
                                     )}
+                                    onClick={() => {
+                                      if (canPlay) openLesson(course.slug, lesson.id);
+                                    }}
+                                    role={canPlay ? "button" : undefined}
+                                    tabIndex={canPlay ? 0 : undefined}
+                                    onKeyDown={(e) => {
+                                      if (canPlay && (e.key === "Enter" || e.key === " ")) {
+                                        e.preventDefault();
+                                        openLesson(course.slug, lesson.id);
+                                      }
+                                    }}
                                   >
-                                    <Icon
-                                      className={cn(
-                                        "size-4 shrink-0",
-                                        locked ? "text-muted-foreground" : "text-primary"
-                                      )}
-                                    />
-                                    <span className="flex-1 text-sm font-medium">
+                                    <Icon className="size-4 shrink-0 text-primary/70" />
+                                    <span className="flex-1 truncate text-foreground/90">
                                       {lesson.title}
                                     </span>
                                     {lesson.preview && !enrolled && (
-                                      <Badge variant="secondary" className="bg-primary/10 text-primary hover:bg-primary/10">
-                                        Preview
+                                      <Badge className="border border-primary/40 bg-primary/10 px-1.5 py-0 font-mono text-[10px] uppercase tracking-widest text-primary">
+                                        preview
                                       </Badge>
                                     )}
-                                    {locked && (
+                                    {!lesson.preview && !enrolled && (
                                       <Lock className="size-3.5 text-muted-foreground" />
                                     )}
-                                    <span className="text-xs tabular-nums text-muted-foreground">
-                                      {formatDuration(lesson.durationMins)}
+                                    <span className="text-xs text-muted-foreground">
+                                      {lesson.durationMins}m
                                     </span>
-                                  </button>
-                                </li>
-                              );
-                            })}
-                          </ul>
-                        </AccordionContent>
-                      </AccordionItem>
-                    );
-                  })}
-                </Accordion>
-              </div>
-
-              {/* Quick start CTA */}
-              {!enrolled && (
-                <div className="mt-4 flex flex-wrap items-center gap-2 rounded-xl border bg-primary/5 p-4 text-sm">
-                  <Lock className="size-4 text-primary" />
-                  <span className="flex-1 text-muted-foreground">
-                    {course.sections.reduce((n, s) => n + s.lessons.filter((l) => l.preview).length, 0)} preview lessons available — enroll to unlock the full course.
-                  </span>
-                  <Button size="sm" variant="outline" onClick={handleBuyNow}>
-                    Enroll Now
-                    <ArrowRight className="size-3.5" />
-                  </Button>
+                                  </li>
+                                );
+                              })}
+                            </ul>
+                          </AccordionContent>
+                        </AccordionItem>
+                      );
+                    })}
+                  </Accordion>
                 </div>
-              )}
-            </section>
-          </AnimatedReveal>
+              </section>
+            </AnimatedReveal>
 
-          {/* Requirements */}
-          <AnimatedReveal>
-            <section aria-labelledby="req-h">
-              <SectionTitle icon={CheckCircle2}>
-                <span id="req-h">Requirements</span>
-              </SectionTitle>
-              <ul className="flex flex-col gap-2.5 rounded-2xl border bg-card/50 p-5 sm:p-6">
-                {course.requirements.map((r) => (
-                  <li key={r} className="flex items-start gap-2.5 text-sm">
-                    <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-primary" />
-                    <span className="leading-relaxed text-foreground/90">{r}</span>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          </AnimatedReveal>
-
-          {/* Description */}
-          <AnimatedReveal>
-            <section aria-labelledby="desc-h">
-              <SectionTitle icon={BookOpen}>
-                <span id="desc-h">Description</span>
-              </SectionTitle>
-              <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground sm:text-base">
-                {course.description}
-              </p>
-            </section>
-          </AnimatedReveal>
-
-          {/* Instructor */}
-          {instructor && (
+            {/* REQUIREMENTS */}
             <AnimatedReveal>
-              <section aria-labelledby="ins-h">
-                <SectionTitle icon={GraduationCap}>
-                  <span id="ins-h">Your Instructor</span>
+              <section aria-label="Requirements">
+                <SectionTitle icon={ShieldCheck} label="// requirements">
+                  Requirements
                 </SectionTitle>
-                <Card className="overflow-hidden p-0">
-                  <div className="flex flex-col gap-5 p-5 sm:p-6 md:flex-row">
-                    <div className="flex flex-col items-center gap-3 md:w-48 md:shrink-0">
-                      <Avatar className="size-24 border-2 border-primary/20">
+                <div className="terminal-window p-5">
+                  <ul className="flex flex-col gap-2.5 font-mono text-sm">
+                    {course.requirements.map((r, i) => (
+                      <li key={i} className="flex items-start gap-2 text-foreground/90">
+                        <span className="text-primary">&gt;</span>
+                        <span>{r}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </section>
+            </AnimatedReveal>
+
+            {/* INSTRUCTOR */}
+            {instructor && (
+              <AnimatedReveal>
+                <section aria-label="Instructor">
+                  <SectionTitle icon={Skull} label="// instructor">
+                    Instructor
+                  </SectionTitle>
+                  <Card className="terminal-window p-5 sm:p-6">
+                    <div className="flex flex-col gap-5 sm:flex-row">
+                      <Avatar className="size-20 shrink-0 border-2 border-primary/40 glow-green">
                         <AvatarImage src={instructor.avatar} alt={instructor.name} />
-                        <AvatarFallback className="text-2xl">{instructor.name.charAt(0)}</AvatarFallback>
+                        <AvatarFallback>{instructor.name.charAt(0)}</AvatarFallback>
                       </Avatar>
-                      <div className="text-center">
-                        <h3 className="text-base font-semibold">{instructor.name}</h3>
-                        <p className="text-xs text-muted-foreground">{instructor.title}</p>
-                      </div>
-                      <div className="flex items-center gap-1 text-xs">
-                        <Star className="size-3 fill-amber-400 text-amber-400" />
-                        <span className="font-semibold">{instructor.rating.toFixed(1)}</span>
-                        <span className="text-muted-foreground">instructor rating</span>
-                      </div>
-                    </div>
-                    <div className="flex flex-1 flex-col gap-4">
-                      <p className="text-sm leading-relaxed text-muted-foreground">{instructor.bio}</p>
-                      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                        <div className="rounded-lg border bg-card p-3">
-                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                            <Users className="size-3" />
-                            Students
+                      <div className="flex flex-1 flex-col gap-3">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-mono text-lg font-bold text-primary text-glow-green">
+                              {instructor.name}
+                            </h3>
+                            <CheckCircle2 className="size-4 text-primary" />
                           </div>
-                          <p className="mt-1 text-sm font-semibold">{formatNumber(instructor.students)}</p>
+                          <p className="font-mono text-xs text-muted-foreground">
+                            {instructor.title}
+                          </p>
                         </div>
-                        <div className="rounded-lg border bg-card p-3">
-                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                            <BookOpen className="size-3" />
-                            Courses
-                          </div>
-                          <p className="mt-1 text-sm font-semibold">{instructor.courses}</p>
+                        <p className="text-sm text-muted-foreground">{instructor.bio}</p>
+                        <div className="flex flex-wrap gap-4 font-mono text-xs">
+                          <span className="flex items-center gap-1.5">
+                            <Star className="size-3.5 fill-primary text-primary" />
+                            {instructor.rating.toFixed(1)} rating
+                          </span>
+                          <span className="flex items-center gap-1.5">
+                            <Users className="size-3.5 text-primary" />
+                            {formatNumber(instructor.students)} students
+                          </span>
+                          <span className="flex items-center gap-1.5">
+                            <BookOpen className="size-3.5 text-primary" />
+                            {instructor.courses} courses
+                          </span>
                         </div>
-                        <div className="rounded-lg border bg-card p-3">
-                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                            <Star className="size-3" />
-                            Rating
-                          </div>
-                          <p className="mt-1 text-sm font-semibold">{instructor.rating.toFixed(1)}</p>
-                        </div>
-                      </div>
-                      <div>
-                        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                          Expertise
-                        </p>
-                        <div className="flex flex-wrap gap-2">
-                          {instructor.expertise.map((e) => (
-                            <Badge key={e} variant="secondary" className="gap-1">
-                              <Sparkles className="size-3 text-primary" />
-                              {e}
+                        <div className="flex flex-wrap gap-1.5">
+                          {instructor.expertise.map((tag) => (
+                            <Badge
+                              key={tag}
+                              className="border border-primary/40 bg-primary/10 font-mono text-xs text-primary"
+                            >
+                              {tag}
                             </Badge>
                           ))}
                         </div>
                       </div>
                     </div>
-                  </div>
-                </Card>
-              </section>
-            </AnimatedReveal>
-          )}
+                  </Card>
+                </section>
+              </AnimatedReveal>
+            )}
 
-          {/* Reviews */}
-          <AnimatedReveal>
-            <section aria-labelledby="rev-h">
-              <SectionTitle icon={Star}>
-                <span id="rev-h">Student Reviews</span>
-              </SectionTitle>
-              <Card className="p-5 sm:p-6">
-                {/* Summary */}
-                <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
-                  <div className="flex flex-col items-center justify-center gap-1 sm:w-44">
-                    <span className="text-5xl font-bold text-amber-500">
+            {/* FIELD REPORTS */}
+            <AnimatedReveal>
+              <section aria-label="Field reports">
+                <SectionTitle icon={Search} label="// field_reports">
+                  Field Reports
+                </SectionTitle>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-[200px_1fr]">
+                  {/* Rating summary */}
+                  <Card className="terminal-window flex flex-col items-center justify-center gap-2 p-5">
+                    <span className="font-mono text-4xl font-bold text-primary text-glow-green">
                       {course.rating.toFixed(1)}
                     </span>
-                    <StarRating rating={course.rating} size={18} />
-                    <span className="text-xs text-muted-foreground">
-                      {formatNumber(course.reviewCount)} reviews
+                    <StarRating rating={course.rating} size={16} />
+                    <span className="font-mono text-xs text-muted-foreground">
+                      {formatNumber(course.reviewCount)} reports
                     </span>
-                  </div>
-                  <Separator orientation="vertical" className="hidden h-32 sm:block" />
-                  <div className="flex flex-1 flex-col gap-1.5">
-                    {[5, 4, 3, 2, 1].map((star) => {
-                      const pct =
-                        star === 5 ? 78 : star === 4 ? 16 : star === 3 ? 4 : star === 2 ? 1 : 1;
-                      return (
-                        <div key={star} className="flex items-center gap-2">
-                          <span className="w-3 text-xs text-muted-foreground">{star}</span>
-                          <Star className="size-3 fill-amber-400 text-amber-400" />
-                          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
-                            <div
-                              className="h-full rounded-full bg-amber-400"
-                              style={{ width: `${pct}%` }}
-                            />
+                  </Card>
+
+                  {/* Review cards */}
+                  <div className="flex flex-col gap-3">
+                    {courseReviews.map((r) => (
+                      <Card key={r.id} className="terminal-window p-4">
+                        <div className="mb-2 flex items-center gap-3">
+                          <Avatar className="size-8 border border-primary/30">
+                            <AvatarImage src={r.userAvatar} alt={r.userName} />
+                            <AvatarFallback>{r.userName.charAt(0)}</AvatarFallback>
+                          </Avatar>
+                          <div className="flex flex-1 flex-col">
+                            <span className="font-mono text-sm font-semibold text-primary">
+                              {r.userName}
+                            </span>
+                            <StarRating rating={r.rating} size={12} />
                           </div>
-                          <span className="w-8 text-right text-xs tabular-nums text-muted-foreground">
-                            {pct}%
+                          <span className="font-mono text-[10px] text-muted-foreground">
+                            {formatDate(r.date)}
                           </span>
                         </div>
-                      );
-                    })}
+                        <p className="text-sm text-muted-foreground">&ldquo;{r.comment}&rdquo;</p>
+                      </Card>
+                    ))}
                   </div>
                 </div>
+              </section>
+            </AnimatedReveal>
 
-                <Separator className="my-5" />
-
-                {/* Review cards */}
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                  {courseReviews.map((review) => (
-                    <motion.div
-                      key={review.id}
-                      initial={{ opacity: 0, y: 12 }}
-                      whileInView={{ opacity: 1, y: 0 }}
-                      viewport={{ once: true }}
-                      transition={{ duration: 0.4 }}
-                      className="flex flex-col gap-3 rounded-xl border bg-card p-4"
-                    >
-                      <div className="flex items-center gap-3">
-                        <Avatar className="size-9">
-                          <AvatarImage src={review.userAvatar} alt={review.userName} />
-                          <AvatarFallback>{review.userName.charAt(0)}</AvatarFallback>
-                        </Avatar>
-                        <div className="flex flex-col">
-                          <span className="text-sm font-semibold">{review.userName}</span>
-                          <div className="flex items-center gap-2">
-                            <StarRating rating={review.rating} size={12} />
-                            <span className="text-[11px] text-muted-foreground">
-                              {formatDate(review.date)}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                      <p className="text-sm leading-relaxed text-muted-foreground">
-                        &ldquo;{review.comment}&rdquo;
-                      </p>
-                    </motion.div>
-                  ))}
-                </div>
-
-                {courseReviews.length === 0 && (
-                  <p className="text-sm text-muted-foreground">
-                    No reviews yet — be the first to review this course.
-                  </p>
-                )}
-              </Card>
-            </section>
-          </AnimatedReveal>
-
-          {/* FAQs */}
-          {course.faqs.length > 0 && (
+            {/* FAQ */}
             <AnimatedReveal>
-              <section aria-labelledby="faq-h">
-                <SectionTitle icon={ShieldCheck}>
-                  <span id="faq-h">Frequently Asked Questions</span>
+              <section aria-label="FAQ">
+                <SectionTitle icon={FileText} label="// faq">
+                  Frequently Asked Questions
                 </SectionTitle>
-                <Card className="p-2 sm:p-3">
-                  <Accordion type="single" collapsible>
+                <Card className="terminal-window p-0">
+                  <Accordion type="single" collapsible className="w-full">
                     {course.faqs.map((faq, i) => (
-                      <AccordionItem key={i} value={`faq-${i}`} className="border-b last:border-b-0">
-                        <AccordionTrigger className="px-3 text-left text-sm font-medium hover:no-underline">
-                          {faq.q}
+                      <AccordionItem
+                        key={i}
+                        value={`faq-${i}`}
+                        className="border-b border-primary/15 last:border-0"
+                      >
+                        <AccordionTrigger className="px-5 py-4 font-mono text-sm text-left hover:bg-primary/5 hover:no-underline [&>svg]:text-primary">
+                          <span className="flex items-start gap-2">
+                            <span className="text-primary">$</span>
+                            <span>{faq.q}</span>
+                          </span>
                         </AccordionTrigger>
-                        <AccordionContent className="px-3 text-sm text-muted-foreground">
-                          {faq.a}
+                        <AccordionContent className="px-5 pb-4 font-mono text-sm text-muted-foreground">
+                          <span className="flex items-start gap-2">
+                            <span className="text-primary">&gt;</span>
+                            <span>{faq.a}</span>
+                          </span>
                         </AccordionContent>
                       </AccordionItem>
                     ))}
@@ -886,96 +871,103 @@ export function CourseDetailView() {
                 </Card>
               </section>
             </AnimatedReveal>
-          )}
-        </div>
+          </div>
 
-        {/* RIGHT: sticky purchase card (desktop only) */}
-        <aside className="hidden lg:block">
-          <div className="sticky top-24">
-            <PurchaseCard
-              course={course}
-              onAddToCart={handleAddToCart}
-              onBuyNow={handleBuyNow}
-              onCheckout={handleCheckout}
-              onRemove={() => removeFromCart(course.id)}
-              onContinue={handleContinue}
-              enrolled={enrolled}
-              inCart={inCart}
-              progress={progress}
-            />
-
-            {/* Mini trust badges */}
-            <div className="mt-4 grid grid-cols-2 gap-2">
-              <div className="flex items-center gap-2 rounded-lg border bg-card/50 p-3">
-                <ShieldCheck className="size-4 text-primary" />
-                <div className="flex flex-col">
-                  <span className="text-[11px] font-semibold">Secure</span>
-                  <span className="text-[10px] text-muted-foreground">Verified payments</span>
-                </div>
-              </div>
-              <div className="flex items-center gap-2 rounded-lg border bg-card/50 p-3">
-                <Award className="size-4 text-primary" />
-                <div className="flex flex-col">
-                  <span className="text-[11px] font-semibold">Certified</span>
-                  <span className="text-[10px] text-muted-foreground">On completion</span>
-                </div>
-              </div>
+          {/* Right column — sticky purchase card on desktop (hidden on mobile) */}
+          <div className="hidden lg:block">
+            <div className="sticky top-24">
+              <PurchaseCard
+                course={course}
+                onAddToCart={handleAddToCart}
+                onBuyNow={handleBuyNow}
+                onCheckout={handleCheckout}
+                onRemove={() => removeFromCart(course.id)}
+                onContinue={handleContinue}
+                enrolled={enrolled}
+                inCart={inCart}
+                progress={progress}
+              />
             </div>
           </div>
-        </aside>
+        </div>
       </div>
 
       {/* ===================== MOBILE STICKY BOTTOM BAR ===================== */}
-      {!enrolled && (
-        <div className="sticky bottom-0 z-30 border-t bg-background/95 backdrop-blur lg:hidden">
-          <div className="flex items-center gap-3 px-4 py-3">
-            <div className="flex flex-col">
-              <div className="flex items-baseline gap-1.5">
-                <span className="text-lg font-bold">{formatPrice(course.price, course.currency)}</span>
-                {course.comparePrice && (
-                  <span className="text-xs text-muted-foreground line-through">
-                    {formatPrice(course.comparePrice, course.currency)}
-                  </span>
-                )}
-              </div>
-              {discount > 0 && (
-                <span className="text-[10px] font-medium text-rose-500">
-                  {discount}% off
+      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-primary/20 bg-background/95 backdrop-blur lg:hidden">
+        <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-3">
+          <div className="flex flex-col">
+            <div className="flex items-center gap-2">
+              <span className="font-mono text-lg font-bold text-primary text-glow-green">
+                {formatPrice(course.price, course.currency)}
+              </span>
+              {course.comparePrice && (
+                <span className="font-mono text-xs text-muted-foreground line-through">
+                  {formatPrice(course.comparePrice, course.currency)}
                 </span>
               )}
-            </div>
-            <div className="ml-auto flex flex-1 items-center gap-2">
-              {inCart ? (
-                <>
-                  <Button className="flex-1 gap-2" size="sm" onClick={handleCheckout}>
-                    <ShoppingCart className="size-4" />
-                    Checkout
-                  </Button>
-                  <Button
-                    size="icon"
-                    variant="outline"
-                    onClick={() => removeFromCart(course.id)}
-                    aria-label="Remove from cart"
-                  >
-                    <Trash2 className="size-4 text-destructive" />
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <Button variant="outline" size="sm" className="gap-2" onClick={handleAddToCart}>
-                    <ShoppingCart className="size-4" />
-                    <span className="sr-only sm:not-sr-only">Cart</span>
-                  </Button>
-                  <Button className="flex-1 gap-2" size="sm" onClick={handleBuyNow}>
-                    <Sparkles className="size-4" />
-                    Buy Now
-                  </Button>
-                </>
+              {discount > 0 && (
+                <Badge className="border border-destructive/40 bg-destructive/15 font-mono text-[10px] text-destructive">
+                  -{discount}%
+                </Badge>
               )}
             </div>
           </div>
+          <div className="flex flex-1 gap-2">
+            {enrolled ? (
+              <Button
+                onClick={handleContinue}
+                className="glow-green flex-1 gap-2 font-mono uppercase tracking-widest"
+                size="sm"
+              >
+                <PlayCircle className="size-4" />
+                Continue
+                <ArrowRight className="size-4" />
+              </Button>
+            ) : inCart ? (
+              <>
+                <Button
+                  onClick={handleCheckout}
+                  className="glow-green flex-1 gap-2 font-mono uppercase tracking-widest"
+                  size="sm"
+                >
+                  <Terminal className="size-4" />
+                  Checkout
+                </Button>
+                <Button
+                  onClick={() => removeFromCart(course.id)}
+                  variant="outline"
+                  size="sm"
+                  className="border-destructive/30 text-destructive"
+                  aria-label="Remove from cart"
+                >
+                  <X className="size-4" />
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button
+                  onClick={handleAddToCart}
+                  variant="outline"
+                  className="border-primary/30 font-mono uppercase tracking-widest text-primary"
+                  size="sm"
+                >
+                  <Terminal className="size-4" />
+                  Cart
+                </Button>
+                <Button
+                  onClick={handleBuyNow}
+                  className="glow-green flex-1 gap-2 font-mono uppercase tracking-widest"
+                  size="sm"
+                >
+                  <Sparkles className="size-4" />
+                  Buy Now
+                  <ArrowRight className="size-4" />
+                </Button>
+              </>
+            )}
+          </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }

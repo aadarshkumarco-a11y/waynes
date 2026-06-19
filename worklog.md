@@ -293,3 +293,169 @@ Stage Summary:
 - Waynes is now an eCommerce-style course store (not marketing landing).
 - Admin is a standalone /admin.html control panel controlling orders, courses, coupons, students, notifications, announcements, activity, data — all via shared localStorage.
 - All code pushed to GitHub.
+
+---
+Task ID: 5-b
+Agent: full-stack-developer (Z.ai Code)
+Task: Rebuild catalog, course detail, checkout, and my-learning views with cyberpunk/hacking aesthetic (deep black bg, neon green #00ff41 + cyan, terminal vibes, monospace headings, glitch effects).
+
+Work Log:
+- Read worklog.md (Tasks 1-4) to understand prior architecture: Zustand store (waynes-lms), override-aware useCourses()/useCourseBySlug() hooks, shared components (CourseCard, StarRating, AnimatedReveal), catalog data (categories with Globe/Network/Bug/Cpu/Swords/Search icons, courseStats, instructorMap, featuredReviews), format helpers (INR), globals.css cyberpunk design tokens (terminal-window, scanlines, glow-green, text-glow-green, bg-grid, cursor-blink, glitch, gradient-brand, scrollbar-thin, no-scrollbar).
+- Read existing versions of all 4 files to preserve business logic (CTA flows, coupon engine, filter pipeline, order workflow) while replacing all visual styling with the hacking aesthetic.
+- Rebuilt ONLY the 4 specified files (no other files touched):
+  1. `src/components/lms/catalog-view.tsx` — CatalogView (named + default)
+  2. `src/components/lms/course-detail-view.tsx` — CourseDetailView (named + default)
+  3. `src/components/lms/checkout-view.tsx` — CheckoutView (named + default)
+  4. `src/components/lms/my-learning-view.tsx` — MyLearningView (named + default)
+
+Design system applied across all 4 files:
+- Deep black bg with neon green primary (#00ff41 oklch) + cyan accents, red destructive, amber warning.
+- `terminal-window` class for all card panels (with traffic-light dots header + "enroll.sh"/"order_summary.txt"/"payment_terminal — output" mono labels).
+- Monospace (`font-mono`) for all headings, labels, stats, prices — terminal feel.
+- `scanlines` overlay on every course thumbnail (catalog cards inherit via CourseCard; detail/checkout/my-learning apply directly).
+- `glow-green` / `glow-red` / `text-glow-green` / `text-glow-red` for primary CTAs, status badges, prices.
+- `bg-grid` background pattern with blurred glow orbs in hero/empty states.
+- `cursor-blink` terminal cursor on main headings.
+- `>` prefix on terminal inputs, breadcrumbs (`~ /home > catalog > slug`), requirement bullets, section labels.
+- `// section_name` mono labels (escaped as `{"// ..."}` JSX expressions to satisfy react/jsx-no-comment-textnodes lint rule).
+- `$` prefix for terminal output lines, `!` for errors.
+
+File-by-file breakdown:
+
+### 1. catalog-view.tsx
+- Header: `> COURSE_CATALOG` (mono, text-gradient-brand, cursor-blink), subtitle "Select your target. Execute your skills.", result count badge "X / Y targets indexed".
+- Search: terminal-window bar with `>` prefix + Search icon, reads searchQuery from store, placeholder "grep -r 'exploit' ./catalog ...".
+- Active query chip: `$ query: "..."` with clear button.
+- Desktop sidebar: terminal-window Card with `filter_module` header + active count badge. Body sections: `// category` (6 categories with lucide Globe/Network/Bug/Cpu/Swords/Search icons + course count), `// skill_level` (Beginner/Intermediate/Advanced), `// price_range` (Slider with mono range display). Reset button: `> reset_filters`.
+- Mobile: Sheet (terminal-window) triggered by `filters` button + sticky sort Select.
+- Grid: 1/2/3 cols of CourseCard with AnimatedReveal stagger.
+- Skeleton: 6 terminal-window cards with green-tinted skeletons (~400ms).
+- Empty state: terminal-window "$ no_results found" with reset + clear-query CTAs.
+- Footer reassurance: mono "secure_channel: encrypted | 30-day refund | lifetime access".
+
+### 2. course-detail-view.tsx
+- useCourseBySlug; 404 → terminal-window "404: TARGET NOT FOUND" with skull icon, red glow, back button.
+- Hero (full-width): banner img with bg-grid + scanlines-style dark gradient overlay + blurred green/cyan glow orbs. Breadcrumb `~ /home > catalog > slug` (mono). Title `> COURSE_TITLE` (text-gradient-brand, text-glow-green). Subtitle. Rating row (mono, amber stars). Instructor mini-card (terminal-window, @name). Stats grid: 5 terminal-window tiles (lessons/duration/level/lang/updated) with mono labels.
+- Body: two-column desktop. Left = content sections (all AnimatedReveal):
+  - `// what_you_will_learn`: 2-col checklist with green Check icons.
+  - `// curriculum`: terminal-window with `$ tree --lessons=N` header + Accordion. Each section: numbered pill (01, 02...) + title + lesson count + duration. Lessons: type icon (PlayCircle/FileText/Code2/Download), title, PREVIEW badge (clickable → openLesson), Lock icon if locked, duration.
+  - `// requirements`: terminal-window with `>` prefixed bullets.
+  - `// instructor`: terminal-window card with avatar (glow-green border), @name, title, bio, stats, expertise pills (green border).
+  - `// field_reports`: rating summary tile (big mono number + stars) + review cards from featuredReviews.
+  - `// faq`: terminal-window Accordion with `$ question` / `> answer` mono format.
+- Right (desktop): sticky terminal-window PurchaseCard with enroll.sh header, scanlined thumbnail, price (text-glow-green) + strikethrough + discount %, progress bar (if enrolled), CTA logic (CONTINUE LEARNING → / In Cart — Checkout + remove / Buy Now + Add to Cart), `// includes` checklist, 30-day refund note.
+- Mobile: fixed sticky bottom bar with price + CTA (Continue / Checkout+X / Cart+BuyNow).
+
+### 3. checkout-view.tsx
+- Reads checkoutCourseId → courseMap. Empty → terminal-window "NO TARGET SELECTED" with skull, browse_catalog button.
+- If not logged in: amber Alert `> auth_required` with Authenticate button (still shows full summary).
+- Two-column: left = payment form (terminal-window cards), right = sticky order summary (terminal-window).
+- Order summary: order_summary.txt window header, scanlined thumbnail + title + @instructor, price breakdown (original_price / discount / coupon / total with text-glow-green), trust badges (Lifetime access / Verifiable certificate / 30-day refund), footer "$ payment verified manually within minutes".
+- Coupon: `// coupon_module` section, `> ENTER_CODE` input + APPLY button (glow-green). Success → green "SAVED ₹X" + REMOVE. Error → red `!` message. Suggestion: "try HACK50 for 50% off" — onClick calls handleApplyCoupon("HACK50") directly (no stale state).
+- Payment: `// payment_gateway` section, UPI box (waynes@upi with COPY button), `// payment_method` radios (UPI/Bank/Card with emoji + description, info-only), `// transaction_reference (UTR)` required input with `>` prefix + red glow on error, "EXECUTE PAYMENT →" button (glow-green, Zap icon).
+- Success screen: terminal-window "payment_terminal — output" with `$ payment_submitted` / `> status: PENDING_VERIFICATION` / `> order_id: ORD-...`, animated CheckCircle2 (spring scale+rotate), "PAYMENT SUBMITTED" heading, `// what_happens_next` 3-step list (01 verify / 02 access granted / 03 start hacking), VIEW MY LEARNING + BACK TO COURSE buttons.
+- Already enrolled: terminal-window "ACCESS ALREADY GRANTED" with Continue + View Course.
+
+### 4. my-learning-view.tsx
+- Not logged in: terminal-window "ACCESS DENIED" (red glow, Lock icon, error 403) with AUTHENTICATE + browse_catalog buttons.
+- Header: `> MY_ARSENAL` (text-gradient-brand, cursor-blink), badge "waynes // dashboard", 4 stat tiles (enrolled/in_progress/completed/certificates) as terminal-window cards with mono `00`-padded values.
+- Filter tabs: All / Active / Cleared (mono, uppercase, primary active state) + `> grep arsenal...` search input.
+- Grid of LearningCards: terminal-window with traffic-light header (active/cleared status), scanlined thumbnail with IN PROGRESS (amber) / COMPLETED ✓ (green glow) badge, mono title, @instructor, progress bar (green, `X/Y lessons · Z%`), last active timeAgo, CONTINUE button (glow-green, Zap icon) / REVIEW + CERT buttons if completed.
+- Empty: terminal-window "// NO_COURSES_FOUND" + browse_catalog button.
+- Recent orders: `// transaction_log` terminal-window list with scanlined thumbnails, mono order numbers, status badges (PENDING=amber, APPROVED=green, REJECTED=red, REFUNDED=violet) + date + amount.
+
+Lint & verification:
+- Initial `bun run lint`: 11 errors — all `react/jsx-no-comment-textnodes` from `// section` text in JSX. Fixed by wrapping each `// text` literal in `{"// text"}` JS expression (preserves visual `//` prefix while satisfying the lint rule).
+- Final `bun run lint`: 0 errors, 0 warnings across all 4 files.
+- `npx tsc --noEmit`: no TypeScript errors in any of the 4 files.
+- Dev server: compiles cleanly, `GET / 200` confirmed in dev.log after final edits.
+
+Stage Summary:
+- 4 production-ready LMS views rebuilt with cohesive cyberpunk/hacking aesthetic: deep black bg, neon green #00ff41 + cyan accents, terminal-window panels with traffic-light dots, monospace headings/labels/prices, scanline overlays on all thumbnails, glow effects on CTAs/status, `>` / `$` / `//` terminal syntax throughout, cursor-blink on main headings.
+- All existing business logic preserved: catalog filter/sort/search pipeline + skeleton + empty state; course detail CTA flow (enrolled/in-cart/default + auth-gating) + curriculum accordion with preview/lock semantics + reviews + FAQ; checkout coupon engine (HACK50 direct-call fix) + UPI payment verification + success screen with PENDING_VERIFICATION status; my-learning progress tracking + certificate access + order history with 4 status colors.
+- Mobile-first responsive throughout: catalog sidebar → Sheet, course detail purchase card → sticky bottom bar, checkout two-column → stacked, my-learning grid 1→2→3 cols.
+- Accessible: semantic landmarks, aria-labels on icon buttons, aria-invalid on UTR input with describedby error, keyboard-navigable accordion/lesson rows (Enter/Space), role=button + tabIndex on clickable lessons.
+- Framer Motion: staggered reveals (AnimatedReveal), spring hover lifts, success-screen scale+rotate animation, keyed AnimatePresence transitions.
+- All 4 files pass `bun run lint` (0 errors) and `tsc --noEmit` (no errors). No other files touched.
+
+---
+Task ID: 5-a
+Agent: frontend-styling-expert
+Task: Rebuild storefront (navbar, footer, auth-modal, course-card, home-view) with hacking/cyberpunk aesthetic + simple mobile-first layout. User called current frontend "bahut bekar" — wanted SIMPLE format, not dense eCommerce grid, but with strong hacking vibe (deep black, neon green #00ff41 + cyan, terminal, mono, glitch, scanlines, matrix feel).
+
+Work Log:
+- Read prior worklog (Tasks 1-4): foundation, admin dashboard, integration, eCommerce home rebuild, Waynes rebrand + admin.html. Prior home (Task 4-a) was a dense storefront (promo carousel / flash deals / bestsellers / sort dropdown / category grid) — user rejected it as too dense.
+- Read shared contract: `useLms` store API (navigate/openCourse/setAuthOpen/addToCart/isInCart/isEnrolled/enterStudentDemo/login/signup/loginWithGoogle/resetPassword), `useCourses()` (override-aware), catalog exports (categories/courseStats/instructorMap/platformStats/testimonials), format helpers, design-system utility classes in globals.css (glass-strong/glow-green/glow-red/text-glow-green/terminal-window/scanlines/cursor-blink/glitch/bg-grid/no-scrollbar/gradient-brand/text-gradient-brand/shadow-glow), StarRating + AnimatedReveal reuse, CourseCard consumers (catalog-view, course-showcase, home-view — kept prop signature `{ course, className?, compact? }` for backward compat).
+- Read existing 5 files to understand prior structure + reuse patterns (CartDrawer/NotificationBell/ThemeToggle wrappers, react-hook-form + zod auth, Framer Motion `layoutId` for nav underline).
+
+Files rebuilt (ONLY these 5, no others touched):
+
+1. `src/components/lms/navbar.tsx` (~290 lines) — Terminal navbar:
+   - Sticky top, `glass-strong` + `border-b border-primary/30`.
+   - Logo: `>_` badge in neon-green bordered box + `waynes.io` wordmark (mono, `text-glow-green`).
+   - Desktop nav: Home/Courses/Pricing/Blog as mono uppercase small links; active link gets `text-primary` + Framer Motion `layoutId="nav-active"` underline (1px neon green with `glow-green`).
+   - Search: desktop expandable Input (mono, `grep courses...` placeholder, green border on focus); mobile toggle button.
+   - Actions: ThemeToggle, CartDrawer (ShoppingBag + neon-green count badge with `glow-green`), NotificationBell, user Avatar dropdown (My Learning/Dashboard/Admin Panel/Certificates/sign_out) OR `Sign in` outlined button (mono uppercase, green border).
+   - Mobile: Sheet with `~/home` style nav links + `Access Terminal` / `Create Access` auth buttons.
+   - Status bar BELOW navbar: `root@waynes:~# system online` + blinking `cursor-blink` + `uptime 99.9%` on the right (mono, tiny, muted, pulsing green dot).
+
+2. `src/components/lms/footer.tsx` (~180 lines) — Dark terminal footer:
+   - `border-t border-primary/30` on `bg-background`.
+   - Newsletter strip "Join the underground" (gradient bg, `>` prefix tagline, email input + Subscribe button → POST /api/subscribers with toast).
+   - Logo + tagline "Hack legally. Learn deeply. Earn massively." + 3 socials (Twitter/GitHub/Discord as MessageCircle).
+   - 3 link columns (Learn / Company / Support) — mono labels, clickable views navigate store.
+   - Bottom: gradient `---[ SECURE ]---` divider with ShieldCheck icon + `© 2025 waynes.io — access granted.`
+
+3. `src/components/lms/auth-modal.tsx` (~400 lines) — Terminal login dialog:
+   - `DialogContent` styled with `terminal-window scanlines`.
+   - Title bar: 3 dots (red/amber/green) + `waynes@auth: ~/login` + `ssh` label.
+   - Title `AUTHENTICATE` / `CREATE ACCESS` / `RESET ACCESS` (mono, `text-glow-green`) + sub-description with `>` prefix + blinking cursor.
+   - Forms (react-hook-form + zod) per mode: login (email+password with Eye/EyeOff toggle), signup (handle+email+password), forgot (email).
+   - Inputs: `rounded-none`, mono, lowercase, green border on focus; labels prefixed with `$` (terminal prompt); errors prefixed `> err:`.
+   - Submit: `AUTHENTICATE` / `CREATE ACCESS` / `TRANSMIT RESET` (neon green, `glow-green`, mono uppercase, with Fingerprint/Terminal icon).
+   - Google button (`OAuth · Google`, outline) + Quick Access box: Student (calls `enterStudentDemo()`) + Admin (opens `/admin.html` in new tab).
+   - Mode-switch links styled as `./provision_account` / `./authenticate` / `> forgot_password`.
+
+4. `src/components/lms/course-card.tsx` (~160 lines) — Hacker product card:
+   - `Card` with `bg-card`, `hover:border-primary hover:glow-green`, Framer Motion `whileHover={{ y: -4 }}` lift.
+   - Thumbnail: plain `<img>` with `object-cover`, dark gradient overlay `from-background/95`, `scanlines` overlay on hover.
+   - Top-left: level badge (`BEGINNER/INTERMEDIATE/ADVANCED`, mono uppercase, green outline, backdrop-blur).
+   - Top-right: discount % badge (`bg-destructive`, `glow-red`).
+   - Hover overlay: neon-green circle with `PlayCircle` + `INITIATE` label (`text-glow-green`).
+   - Title: mono bold 2-line clamp (hover → primary).
+   - Instructor: 16px avatar (green border) + handle.
+   - StarRating (size 11, showValue, count).
+   - Bottom: price (mono bold, `text-glow-green` on group-hover) + strikethrough comparePrice + CTA button (`ENROLL` / `IN CART ✓` disabled / `ACCESS` enrolled).
+   - Stats row: Users count + Clock duration (mono tiny muted, hidden when compact).
+   - Backward-compatible: kept `{ course, className?, compact? }` signature (catalog-view/course-showcase unaffected).
+
+5. `src/components/landing/home-view.tsx` (~530 lines) — Simple storefront (8 sections, clean not dense):
+   - Ambient gradient blobs (fixed, -z-10) for matrix-glow feel.
+   - (a) Hero: `terminal-window scanlines` card with title bar `root@waynes:~# ./access.sh` (3 dots + bash label); `bg-grid` body in 2-col grid (lg). Left: Typewriter component types `> initializing access...` then swaps to `> access granted. welcome, operator.` + blinking cursor; main headline `Hack the Planet. Legally.` (mono black, `text-glow-green`, `glitch` class on hover, `text-gradient-brand` on "Legally."); subheadline; CTAs `Browse Courses` (neon green `glow-green` → catalog) + `Watch Demo` (outline → setAuthOpen signup); fake terminal output box `$ nmap -sV waynes.io` + `> N courses found. All systems go.` with `cursor-blink`; 3 floating glass badges (Star 4.9 / Users 68K+ / Shield OSCP-ready) absolutely positioned with Framer Motion stagger. Right (lg only): secondary `payload.sh` terminal window with ASCII command output.
+   - (b) Trust strip: glass row, 4 items (Users 68K hackers / Terminal 8 courses / Globe 42 countries / Shield 7-day refund) mono muted.
+   - (c) Categories: `> select your path` heading + `no-scrollbar` horizontal pill row (6 categories with mapped lucide icons Globe/Network/Bug/Cpu/Swords/Search + `[count]`) → navigate catalog.
+   - (d) Featured: `// FEATURED EXPLOITS` heading + `View all →` action; grid 1/2/3 of `CourseCard` for `courses.filter(c=>c.featured).slice(0,4)` with AnimatedReveal stagger.
+   - (e) All Courses: `// ALL COURSES · N results` heading; grid 1/2/3 of all courses (no sort dropdown — minimal per spec).
+   - (f) Stats band: `bg-grid` rounded panel, 2x2 (mobile) / 1x4 (sm+) grid of big mono numbers (`text-glow-green`): 68K HACKERS / 8 COURSES / 180+ HOURS / 42 COUNTRIES.
+   - (g) Testimonials: `// FIELD REPORTS` heading; 3 glass figure cards with StarRating, quote prefixed `> `, avatar + handle + role.
+   - (h) Final CTA: `terminal-window scanlines` card with pulsing dot + `root@waynes:~# ./enroll` + `> ready_to_start = True` headline (mono, `text-glow-green`, glitch) + `Get Access` (neon green glow → catalog) + `View Pricing` (outline → pricing).
+   - All sections wrapped in `AnimatedReveal` for scroll-in fade. Mobile-first responsive throughout. Navbar/Footer NOT rendered (layout handles them).
+
+Design adherence:
+- Hacking aesthetic: deep black bg (bg-background/card), neon green primary, cyan/red accents, mono fonts on all headings + labels (via globals.css h1/h2/h3 rule + explicit `font-mono`), `>` / `$` / `//` / `~/` terminal prompts everywhere, blinking cursors, scanlines on hero/auth/final-CTA, glitch on headlines, glow effects on buttons/badges/active states.
+- Simple layout: 8 clean sections in vertical stack, no dense grid, no sort dropdown, no flash-deals/bestsellers rows, no promo carousel — just hero → trust → categories → featured → all → stats → testimonials → CTA.
+- Reused design-system classes only (no new CSS). No indigo/blue/purple. Dark-mode-first.
+- Accessible: semantic `<section aria-label>`, `<figure>`/`<figcaption>` for testimonials, `<button type="button">` with aria-labels, alt text on all images, label associations in auth form, `aria-label` on icon-only buttons.
+
+Lint / Type check:
+- `npx eslint` on all 5 files → 0 errors, 0 warnings.
+- `npx tsc --noEmit` filtered to my 5 files → 0 errors.
+- `bun run lint` project-wide: my 5 files clean. 9 pre-existing errors remain in OTHER files (catalog-view.tsx, checkout-view.tsx, course-detail-view.tsx — all `react/jsx-no-comment-textnodes` on `//` text nodes) — NOT in my scope, intentionally untouched.
+- Pre-existing tsc errors in catalog.ts/seed-db.ts/store.ts also untouched (not my files).
+- Dev server returns HTTP 200 on `/`; SSR shell renders "Loading Waynes…" gate (existing architecture, client-mounted rendering).
+
+Stage Summary:
+- 5 storefront files rebuilt with cyberpunk/hacking aesthetic + simple mobile-first layout: terminal navbar (with status bar), dark footer (with newsletter + SECURE divider), terminal-window auth modal (login/signup/forgot + Google + Quick Access), hacker course card (level/discount/play-overlay/ENROLL/IN CART/ACCESS), and a clean 8-section home (terminal hero with typewriter + floating badges, trust strip, category pills, featured grid, all-courses grid, stats band, field reports, final CTA).
+- Backward-compatible: CourseCard prop signature preserved so catalog-view/course-showcase keep working unchanged.
+- Hacking vibe comes from terminal styling, mono fonts, neon green/cyan, glitch/scanlines/cursor-blink — NOT from cramming sections. Layout is simple and clean per user request.
+- All 5 files lint-clean + tsc-clean. No other files touched.

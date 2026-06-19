@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Waynes — Admin Control Panel</title>
+<title>Waynes — root@admin:~#</title>
 <meta name="robots" content="noindex" />
 <style>
   :root{
@@ -21,26 +21,35 @@
     -webkit-font-smoothing:antialiased;
   }
   ::selection{background:rgba(16,185,129,.25)}
+  /* Mono font for headings — terminal feel */
+  h1,h2,h3,.mono{font-family:ui-monospace,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;letter-spacing:-.02em}
+  /* Scanlines overlay on body */
+  body::before{content:"";position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(16,185,129,.015) 2px,rgba(16,185,129,.015) 4px);pointer-events:none;z-index:9999}
+  /* Glow text */
+  .glow{text-shadow:0 0 8px rgba(16,185,129,.5)}
+  /* Blinking cursor */
+  @keyframes blink{0%,49%{opacity:1}50%,100%{opacity:0}}
+  .cursor::after{content:"▊";animation:blink 1s infinite;color:var(--brand);margin-left:2px}
   a{color:inherit;text-decoration:none}
   .app{display:grid;grid-template-columns:248px 1fr;min-height:100vh}
   /* sidebar */
   .sidebar{background:var(--bg2);border-right:1px solid var(--border);padding:18px 14px;position:sticky;top:0;height:100vh;overflow-y:auto}
   .brand{display:flex;align-items:center;gap:10px;padding:6px 8px 16px;border-bottom:1px solid var(--border);margin-bottom:12px}
   .brand .logo{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--brand),var(--brand2));display:grid;place-items:center;color:#fff;font-weight:800;box-shadow:0 8px 24px rgba(16,185,129,.3)}
-  .brand h1{font-size:16px;margin:0;font-weight:800;letter-spacing:-.01em}
-  .brand span{font-size:11px;color:var(--muted)}
+  .brand h1{font-size:16px;margin:0;font-weight:800;letter-spacing:-.01em;text-shadow:0 0 10px rgba(16,185,129,.4)}
+  .brand span{font-size:11px;color:var(--muted);font-family:ui-monospace,monospace}
   .nav{display:flex;flex-direction:column;gap:2px}
-  .nav button{display:flex;align-items:center;gap:10px;width:100%;padding:9px 11px;border:0;background:transparent;color:var(--muted);font-size:13.5px;font-weight:500;border-radius:9px;cursor:pointer;text-align:left;transition:.15s}
-  .nav button:hover{background:rgba(255,255,255,.04);color:var(--fg)}
-  .nav button.active{background:rgba(16,185,129,.12);color:var(--brand)}
+  .nav button{display:flex;align-items:center;gap:10px;width:100%;padding:9px 11px;border:0;background:transparent;color:var(--muted);font-size:13px;font-weight:500;border-radius:8px;cursor:pointer;text-align:left;transition:.15s;font-family:ui-monospace,monospace;text-transform:uppercase;letter-spacing:.02em}
+  .nav button:hover{background:rgba(16,185,129,.06);color:var(--fg)}
+  .nav button.active{background:rgba(16,185,129,.12);color:var(--brand);text-shadow:0 0 8px rgba(16,185,129,.4)}
   .nav button .ico{width:17px;height:17px;flex-shrink:0}
-  .nav .sec{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted2);padding:14px 11px 6px;font-weight:700}
+  .nav .sec{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted2);padding:14px 11px 6px;font-weight:700;font-family:ui-monospace,monospace}
   .badge-count{margin-left:auto;background:var(--amber);color:#1a1206;font-size:10px;font-weight:800;padding:1px 6px;border-radius:999px}
   /* main */
   .main{min-width:0}
   .topbar{position:sticky;top:0;z-index:10;display:flex;align-items:center;gap:12px;padding:14px 24px;background:rgba(11,17,16,.8);backdrop-filter:blur(12px);border-bottom:1px solid var(--border)}
-  .topbar h2{font-size:18px;margin:0;font-weight:700;letter-spacing:-.01em}
-  .topbar .sub{font-size:12px;color:var(--muted)}
+  .topbar h2{font-size:18px;margin:0;font-weight:700;letter-spacing:-.01em;text-shadow:0 0 8px rgba(16,185,129,.3)}
+  .topbar .sub{font-size:12px;color:var(--muted);font-family:ui-monospace,monospace}
   .topbar .spacer{flex:1}
   .btn{display:inline-flex;align-items:center;gap:7px;padding:8px 14px;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:var(--card);color:var(--fg);transition:.15s;white-space:nowrap}
   .btn:hover{border-color:var(--brand);color:var(--brand)}
@@ -70,7 +79,7 @@
   .table-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:var(--radius)}
   table{width:100%;border-collapse:collapse;font-size:13px;min-width:560px}
   th,td{padding:11px 14px;text-align:left;border-bottom:1px solid var(--border)}
-  th{background:var(--card2);font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:700;position:sticky;top:0}
+  th{background:var(--card2);font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:700;position:sticky;top:0;font-family:ui-monospace,monospace}
   tr:last-child td{border-bottom:0}
   tbody tr:hover{background:rgba(255,255,255,.02)}
   td .strong{font-weight:600}
@@ -78,7 +87,7 @@
   .thumb{width:38px;height:26px;border-radius:6px;object-fit:cover;vertical-align:middle}
   .avatar{width:28px;height:28px;border-radius:50%;object-fit:cover;vertical-align:middle}
   /* badges */
-  .badge{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:999px;font-size:11px;font-weight:700;letter-spacing:.02em}
+  .badge{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:4px;font-size:10px;font-weight:700;letter-spacing:.05em;font-family:ui-monospace,monospace;text-transform:uppercase}
   .b-pending{background:rgba(245,158,11,.14);color:var(--amber)}
   .b-approved{background:rgba(16,185,129,.14);color:var(--brand)}
   .b-rejected{background:rgba(244,63,94,.14);color:var(--rose)}
@@ -151,7 +160,7 @@
       <div class="logo">W</div>
       <div>
         <h1>Waynes</h1>
-        <span>Admin Control Panel</span>
+        <span>root@waynes:~#</span>
       </div>
     </div>
     <nav class="nav" id="nav">
@@ -233,17 +242,17 @@ function seedState(){
     enrollments:[],
     notes:[],bookmarks:[],
     certificates:[],
-    notifications:[{id:uid("n"),type:"SUCCESS",title:"Welcome to Waynes",body:"Your store is ready.",read:false,createdAt:now}],
+    notifications:[{id:uid("n"),type:"SUCCESS",title:"Access granted to Waynes",body:"Your hacking lab is ready. 8 courses loaded.",read:false,createdAt:now}],
     announcements:[
-      {id:uid("an"),title:"Holiday sale — 50% off all courses",body:"Use code WELCOME50 at checkout.",audience:"ALL",pinned:true,active:true,createdAt:now},
+      {id:uid("an"),title:"Launch sale — 50% off all hacking courses",body:"Use code HACK50 at checkout. Limited time.",audience:"ALL",pinned:true,active:true,createdAt:now},
     ],
     activities:[
-      {id:uid("a"),userName:"Admin",action:"STORE_INIT",detail:"Store initialized",createdAt:now},
+      {id:uid("a"),userName:"root",action:"SYSTEM_INIT",detail:"Waynes admin terminal initialized",createdAt:now},
     ],
     couponList:[
-      {id:"cp-1",code:"WELCOME50",type:"PERCENT",value:50,startsAt:"2025-01-01T00:00:00Z",expiresAt:"2026-12-31T23:59:59Z",usageLimit:1000,usedCount:142,perUserLimit:1,minAmount:0,active:true},
+      {id:"cp-1",code:"HACK50",type:"PERCENT",value:50,startsAt:"2025-01-01T00:00:00Z",expiresAt:"2026-12-31T23:59:59Z",usageLimit:1000,usedCount:142,perUserLimit:1,minAmount:0,active:true},
       {id:"cp-2",code:"SAVE1000",type:"FIXED",value:1000,startsAt:"2025-01-01T00:00:00Z",expiresAt:"2026-12-31T23:59:59Z",usageLimit:500,usedCount:88,perUserLimit:1,minAmount:2999,active:true},
-      {id:"cp-3",code:"LAUNCH25",type:"PERCENT",value:25,courseId:"course-4",startsAt:"2025-01-01T00:00:00Z",expiresAt:"2026-12-31T23:59:59Z",usageLimit:200,usedCount:33,perUserLimit:1,minAmount:0,active:true},
+      {id:"cp-3",code:"BOUNTY25",type:"PERCENT",value:25,courseId:"course-3",startsAt:"2025-01-01T00:00:00Z",expiresAt:"2026-12-31T23:59:59Z",usageLimit:200,usedCount:33,perUserLimit:1,minAmount:0,active:true},
     ],
     courseOverrides:{},
     items:[],
@@ -253,14 +262,14 @@ function seedState(){
 
 /* course catalog (mirrors app seed for display) */
 const CAT={
-  "course-1":{id:"course-1",slug:"fullstack-nextjs-mastery",title:"Full-Stack Mastery with Next.js 16",thumbnail:"https://picsum.photos/seed/nextjs-course/800/450",price:4999,comparePrice:12999,instructor:"Aarav Mehta"},
-  "course-2":{id:"course-2",slug:"data-science-bootcamp",title:"Data Science & ML Bootcamp",thumbnail:"https://picsum.photos/seed/datascience-course/800/450",price:6999,comparePrice:19999,instructor:"Priya Nair"},
-  "course-3":{id:"course-3",slug:"ui-ux-design-masterclass",title:"UI/UX Design Masterclass 2025",thumbnail:"https://picsum.photos/seed/design-course/800/450",price:3499,comparePrice:8999,instructor:"Rohan Kapoor"},
-  "course-4":{id:"course-4",slug:"llm-engineering-rag",title:"LLM Engineering: RAG, Agents & Fine-Tuning",thumbnail:"https://picsum.photos/seed/llm-course/800/450",price:7999,comparePrice:24999,instructor:"Vikram Joshi"},
-  "course-5":{id:"course-5",slug:"growth-marketing-pro",title:"Growth Marketing Pro",thumbnail:"https://picsum.photos/seed/marketing-course/800/450",price:2999,comparePrice:7999,instructor:"Sneha Reddy"},
-  "course-6":{id:"course-6",slug:"system-design-interview",title:"System Design Interview: Crack FAANG",thumbnail:"https://picsum.photos/seed/systemdesign-course/800/450",price:5999,comparePrice:14999,instructor:"Aarav Mehta"},
-  "course-7":{id:"course-7",slug:"product-management-essentials",title:"Product Management Essentials",thumbnail:"https://picsum.photos/seed/product-course/800/450",price:3999,comparePrice:9999,instructor:"Ananya Iyer"},
-  "course-8":{id:"course-8",slug:"advanced-tailwind-design",title:"Advanced Tailwind CSS & Modern UI",thumbnail:"https://picsum.photos/seed/tailwind-course/800/450",price:2499,comparePrice:5999,instructor:"Rohan Kapoor"},
+  "course-1":{id:"course-1",slug:"ethical-hacking-bootcamp",title:"Ethical Hacking Bootcamp: Zero to Hero",thumbnail:"https://picsum.photos/seed/hack-bootcamp/800/450",price:4999,comparePrice:14999,instructor:"Ghost404"},
+  "course-2":{id:"course-2",slug:"web-application-pentesting",title:"Web Application Penetration Testing",thumbnail:"https://picsum.photos/seed/hack-web/800/450",price:5999,comparePrice:18999,instructor:"Ghost404"},
+  "course-3":{id:"course-3",slug:"bug-bounty-mastery",title:"Bug Bounty Mastery: $10K/Month Blueprint",thumbnail:"https://picsum.photos/seed/hack-bounty/800/450",price:3999,comparePrice:11999,instructor:"ShadowByte"},
+  "course-4":{id:"course-4",slug:"network-pentesting-metasploit",title:"Network Pentesting & Metasploit Mastery",thumbnail:"https://picsum.photos/seed/hack-network/800/450",price:6999,comparePrice:21999,instructor:"NullRoute"},
+  "course-5":{id:"course-5",slug:"active-directory-exploitation",title:"Active Directory Exploitation: Zero to Domain Admin",thumbnail:"https://picsum.photos/seed/hack-ad/800/450",price:7999,comparePrice:24999,instructor:"Nyx Cipher"},
+  "course-6":{id:"course-6",slug:"binary-exploitation-exploit-dev",title:"Binary Exploitation & Exploit Development",thumbnail:"https://picsum.photos/seed/hack-binary/800/450",price:8999,comparePrice:29999,instructor:"Binary Reaper"},
+  "course-7":{id:"course-7",slug:"red-team-operations",title:"Red Team Operations: Advanced Adversary Simulation",thumbnail:"https://picsum.photos/seed/hack-redteam/800/450",price:9999,comparePrice:34999,instructor:"Nyx Cipher"},
+  "course-8":{id:"course-8",slug:"mobile-app-hacking",title:"Mobile App Hacking: Android & iOS",thumbnail:"https://picsum.photos/seed/hack-mobile/800/450",price:5499,comparePrice:16999,instructor:"V3nom"},
 };
 const CATARR=Object.values(CAT);
 

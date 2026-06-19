@@ -58,3 +58,8 @@ db/*.db-journal
 
 # tool results
 tool-results/
+
+# user uploads & agent context
+/upload/
+/agent-ctx/
+
