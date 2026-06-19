@@ -1,0 +1,367 @@
+// Prisma schema — Enterprise LMS & Digital Course Selling Platform
+// SQLite datasource. Enums are modeled as String + app-layer validation
+// because SQLite has no native enum type.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// USERS & AUTH
+// ---------------------------------------------------------------------------
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  name          String
+  passwordHash  String?
+  avatar        String?
+  role          String   @default("STUDENT") // STUDENT | SUPER_ADMIN
+  emailVerified Boolean  @default(false)
+  provider      String   @default("email") // email | google
+  bio           String?
+  title         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  enrollments   Enrollment[]
+  orders        Order[]
+  reviews       Review[]
+  notes         LessonNote[]
+  bookmarks     Bookmark[]
+  progress      LessonProgress[]
+  certificates  Certificate[]
+  notifications Notification[]
+  activities    ActivityLog[]
+  blogPosts     BlogPost[]
+  authoredCourses Course[]
+}
+
+// ---------------------------------------------------------------------------
+// COURSE CATALOG
+// ---------------------------------------------------------------------------
+model Category {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  slug      String   @unique
+  icon      String?
+  createdAt DateTime @default(now())
+
+  courses Course[]
+}
+
+model Tag {
+  id        String @id @default(cuid())
+  name      String @unique
+  slug      String @unique
+
+  courses Course[]
+}
+
+model Course {
+  id            String   @id @default(cuid())
+  slug          String   @unique
+  title         String
+  subtitle      String
+  description   String
+  thumbnail     String
+  banner        String?
+  trailerUrl    String?
+  previewVideo  String?
+  price         Float
+  comparePrice  Float?
+  currency      String   @default("INR")
+  level         String   @default("BEGINNER") // BEGINNER | INTERMEDIATE | ADVANCED
+  language      String   @default("English")
+  durationMins  Int      @default(0)
+  benefits      String   // JSON array of strings
+  requirements  String   // JSON array of strings
+  faqs          String   // JSON array of {q,a}
+  featured      Boolean  @default(false)
+  published     Boolean  @default(true)
+  rating        Float    @default(0)
+  reviewCount   Int      @default(0)
+  studentCount  Int      @default(0)
+  instructorId  String
+  instructor    User     @relation(fields: [instructorId], references: [id])
+  categoryId    String?
+  category      Category? @relation(fields: [categoryId], references: [id])
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  sections     Section[]
+  enrollments  Enrollment[]
+  reviews      Review[]
+  orders       Order[]
+  coupons      Coupon[]   // coupons scoped to this course
+  certificates Certificate[]
+  tags         Tag[]      // implicit many-to-many
+}
+
+// implicit many-to-many Course <-> Tag (no explicit join model needed)
+
+model Section {
+  id          String  @id @default(cuid())
+  courseId     String
+  course      Course  @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  order       Int     @default(0)
+
+  lessons Lesson[]
+}
+
+model Lesson {
+  id          String  @id @default(cuid())
+  sectionId   String
+  section     Section @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  title       String
+  type        String  @default("VIDEO") // VIDEO | PDF | TEXT | DOWNLOAD
+  videoUrl    String?
+  content     String?
+  resourceUrl String?
+  durationMins Int    @default(0)
+  preview     Boolean @default(false)
+  order       Int     @default(0)
+
+  progress  LessonProgress[]
+  notes     LessonNote[]
+  bookmarks Bookmark[]
+}
+
+// ---------------------------------------------------------------------------
+// ENROLLMENT & PROGRESS
+// ---------------------------------------------------------------------------
+model Enrollment {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  courseId  String
+  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  progress  Float    @default(0) // 0..100
+  completed Boolean @default(false)
+  enrolledAt DateTime @default(now())
+  lastViewedLessonId String?
+  lastViewedAt       DateTime?
+
+  lessonProgress LessonProgress[]
+  certificates   Certificate[]
+
+  @@unique([userId, courseId])
+}
+
+model LessonProgress {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lessonId    String
+  lesson      Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  enrollmentId String?
+  enrollment  Enrollment? @relation(fields: [enrollmentId], references: [id])
+  completed   Boolean  @default(false)
+  position    Int      @default(0) // seconds watched
+  updatedAt   DateTime @updatedAt
+
+  @@unique([userId, lessonId])
+}
+
+model LessonNote {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lessonId  String
+  lesson    Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  content   String
+  timestamp Int      @default(0) // seconds
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Bookmark {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lessonId  String
+  lesson    Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  note      String?
+  timestamp Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, lessonId])
+}
+
+// ---------------------------------------------------------------------------
+// ORDERS & PAYMENTS
+// ---------------------------------------------------------------------------
+model Order {
+  id            String   @id @default(cuid())
+  orderNumber   String   @unique
+  userId        String
+  user          User     @relation(fields: [userId], references: [id])
+  courseId      String
+  course        Course   @relation(fields: [courseId], references: [id])
+  amount        Float
+  discount      Float    @default(0)
+  finalAmount   Float
+  currency      String   @default("INR")
+  status        String   @default("PENDING") // PENDING | APPROVED | REJECTED | REFUNDED
+  couponCode    String?
+  paymentRef    String?  // external verification reference
+  paymentMethod String?  // UPI | BANK | CARD (info only)
+  notes         String?  // JSON array of admin notes
+  approvedAt    DateTime?
+  rejectedAt    DateTime?
+  refundedAt    DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  activities ActivityLog[]
+}
+
+model Coupon {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  type        String   @default("PERCENT") // PERCENT | FIXED
+  value       Float    // percent (0..100) or fixed amount
+  courseId    String?  // null = global
+  course      Course?  @relation(fields: [courseId], references: [id])
+  startsAt    DateTime @default(now())
+  expiresAt   DateTime?
+  usageLimit  Int?     // total uses allowed
+  usedCount   Int      @default(0)
+  perUserLimit Int     @default(1)
+  minAmount   Float    @default(0)
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+}
+
+// ---------------------------------------------------------------------------
+// REVIEWS & TESTIMONIALS
+// ---------------------------------------------------------------------------
+model Review {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  courseId  String
+  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  rating    Int      // 1..5
+  comment   String
+  featured  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, courseId])
+}
+
+model Testimonial {
+  id        String   @id @default(cuid())
+  name      String
+  role      String
+  avatar    String?
+  quote     String
+  rating    Int      @default(5)
+  featured  Boolean  @default(true)
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+}
+
+// ---------------------------------------------------------------------------
+// CERTIFICATES
+// ---------------------------------------------------------------------------
+model Certificate {
+  id             String   @id @default(cuid())
+  verifyId       String   @unique
+  userId         String
+  user           User     @relation(fields: [userId], references: [id])
+  courseId       String
+  course         Course   @relation(fields: [courseId], references: [id])
+  enrollmentId   String?
+  enrollment     Enrollment? @relation(fields: [enrollmentId], references: [id])
+  issuedAt       DateTime @default(now())
+  candidateName  String
+  courseTitle    String
+  instructorName String
+  score          Float    @default(100)
+}
+
+// ---------------------------------------------------------------------------
+// NOTIFICATIONS & ANNOUNCEMENTS
+// ---------------------------------------------------------------------------
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String?  // null = broadcast
+  user      User?    @relation(fields: [userId], references: [id])
+  type      String   @default("INFO") // INFO | SUCCESS | WARNING | ANNOUNCEMENT | ORDER
+  title     String
+  body      String
+  link      String?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model Announcement {
+  id        String   @id @default(cuid())
+  title     String
+  body      String
+  audience  String   @default("ALL") // ALL | STUDENTS
+  pinned    Boolean  @default(false)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+// ---------------------------------------------------------------------------
+// BLOG / CMS
+// ---------------------------------------------------------------------------
+model BlogPost {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  title       String
+  excerpt     String
+  content     String   // markdown
+  coverImage  String?
+  authorId    String?
+  author      User?    @relation(fields: [authorId], references: [id])
+  category    String?
+  tags        String   // JSON array
+  status      String   @default("DRAFT") // DRAFT | PUBLISHED | SCHEDULED
+  publishedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  views       Int      @default(0)
+}
+
+model CmsPage {
+  id        String   @id @default(cuid())
+  slug      String   @unique
+  title     String
+  content   String
+  updatedAt DateTime @updatedAt
+}
+
+model Setting {
+  id    String @id @default(cuid())
+  key   String @unique
+  value String
+}
+
+model Subscriber {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  createdAt DateTime @default(now())
+}
+
+model ActivityLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  orderId   String?
+  order     Order?   @relation(fields: [orderId], references: [id])
+  action    String
+  detail    String
+  ip        String?
+  createdAt DateTime @default(now())
+}

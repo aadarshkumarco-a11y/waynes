@@ -1,0 +1,11 @@
+export { HomeView } from "./home-view";
+export { Hero } from "./hero";
+export { Stats } from "./stats";
+export { CourseShowcase } from "./course-showcase";
+export { Features } from "./features";
+export { Benefits } from "./benefits";
+export { Testimonials } from "./testimonials";
+export { Instructors } from "./instructors";
+export { Pricing } from "./pricing";
+export { Faq } from "./faq";
+export { CtaSection } from "./cta";

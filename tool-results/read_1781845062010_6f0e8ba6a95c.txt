@@ -1,0 +1,978 @@
+     1→import type {
+     2→  BlogPost,
+     3→  Category,
+     4→  Course,
+     5→  Coupon,
+     6→  Instructor,
+     7→  Testimonial,
+     8→} from "@/lib/types";
+     9→
+    10→// ---------------------------------------------------------------------------
+    11→// CATEGORIES
+    12→// ---------------------------------------------------------------------------
+    13→export const categories: Category[] = [
+    14→  { id: "cat-dev", name: "Web Development", slug: "web-development", icon: "Code2", courseCount: 3 },
+    15→  { id: "cat-data", name: "Data Science", slug: "data-science", icon: "BarChart3", courseCount: 2 },
+    16→  { id: "cat-design", name: "Design", slug: "design", icon: "Palette", courseCount: 2 },
+    17→  { id: "cat-ai", name: "AI & Machine Learning", slug: "ai-ml", icon: "BrainCircuit", courseCount: 2 },
+    18→  { id: "cat-mkt", name: "Marketing", slug: "marketing", icon: "Megaphone", courseCount: 2 },
+    19→  { id: "cat-biz", name: "Business", slug: "business", icon: "Briefcase", courseCount: 2 },
+    20→];
+    21→
+    22→// ---------------------------------------------------------------------------
+    23→// INSTRUCTORS
+    24→// ---------------------------------------------------------------------------
+    25→export const instructors: Instructor[] = [
+    26→  {
+    27→    id: "ins-1",
+    28→    name: "Aarav Mehta",
+    29→    title: "Principal Engineer, ex-Google",
+    30→    avatar: "https://i.pravatar.cc/200?img=12",
+    31→    bio: "15+ years building distributed systems at scale. Taught 40,000+ engineers across the globe.",
+    32→    rating: 4.9,
+    33→    students: 41200,
+    34→    courses: 6,
+    35→    expertise: ["System Design", "TypeScript", "Cloud Architecture"],
+    36→  },
+    37→  {
+    38→    id: "ins-2",
+    39→    name: "Priya Nair",
+    40→    title: "Senior Data Scientist, ex-Netflix",
+    41→    avatar: "https://i.pravatar.cc/200?img=47",
+    42→    bio: "Built recommendation engines serving 200M users. PhD in Statistics from IIT Bombay.",
+    43→    rating: 4.8,
+    44→    students: 28900,
+    45→    courses: 4,
+    46→    expertise: ["Python", "ML", "Statistics", "MLOps"],
+    47→  },
+    48→  {
+    49→    id: "ins-3",
+    50→    name: "Rohan Kapoor",
+    51→    title: "Design Lead, ex-Figma",
+    52→    avatar: "https://i.pravatar.cc/200?img=33",
+    53→    bio: "Product designer who shipped interfaces used by millions. Speaker at Config & Awwwards.",
+    54→    rating: 4.9,
+    55→    students: 19500,
+    56→    courses: 3,
+    57→    expertise: ["UI/UX", "Figma", "Design Systems"],
+    58→  },
+    59→  {
+    60→    id: "ins-4",
+    61→    name: "Sneha Reddy",
+    62→    title: "Growth Marketer, ex-Notion",
+    63→    avatar: "https://i.pravatar.cc/200?img=45",
+    64→    bio: "Scaled 0→1M users for 3 SaaS startups. Obsessed with conversion funnels and content engines.",
+    65→    rating: 4.7,
+    66→    students: 22300,
+    67→    courses: 4,
+    68→    expertise: ["Growth", "SEO", "Content", "Paid Ads"],
+    69→  },
+    70→  {
+    71→    id: "ins-5",
+    72→    name: "Vikram Joshi",
+    73→    title: "ML Researcher, ex-OpenAI",
+    74→    avatar: "https://i.pravatar.cc/200?img=15",
+    75→    bio: "Published 20+ papers on LLMs. Built production AI serving 50M requests/day.",
+    76→    rating: 4.9,
+    77→    students: 33800,
+    78→    courses: 5,
+    79→    expertise: ["LLMs", "PyTorch", "RAG", "Fine-tuning"],
+    80→  },
+    81→  {
+    82→    id: "ins-6",
+    83→    name: "Ananya Iyer",
+    84→    title: "Product Leader, ex-Stripe",
+    85→    avatar: "https://i.pravatar.cc/200?img=44",
+    86→    bio: "Launched 3 products to $10M+ ARR. Advisor to 12 YC startups on GTM strategy.",
+    87→    rating: 4.8,
+    88→    students: 16700,
+    89→    courses: 3,
+    90→    expertise: ["Product", "Strategy", "GTM"],
+    91→  },
+    92→];
+    93→
+    94→export const instructorMap = Object.fromEntries(instructors.map((i) => [i.id, i]));
+    95→
+    96→// ---------------------------------------------------------------------------
+    97→// COURSE BUILDER HELPERS
+    98→// ---------------------------------------------------------------------------
+    99→let _lessonSeq = 0;
+   100→function lesson(
+   101→  sectionId: string,
+   102→  title: string,
+   103→  type: "VIDEO" | "PDF" | "TEXT" | "DOWNLOAD",
+   104→  durationMins: number,
+   105→  opts: Partial<Course["sections"][number]["lessons"][number]> = {}
+   106→): Course["sections"][number]["lessons"][number] {
+   107→  _lessonSeq += 1;
+   108→  return {
+   109→    id: `lsn-${_lessonSeq}`,
+   110→    sectionId,
+   111→    title,
+   112→    type,
+   113→    durationMins,
+   114→    preview: opts.preview ?? false,
+   115→    order: _lessonSeq,
+   116→    videoUrl: type === "VIDEO" ? "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4" : undefined,
+   117→    content: opts.content,
+   118→    resourceUrl: opts.resourceUrl,
+   119→  };
+   120→}
+   121→
+   122→function section(
+   123→  courseId: string,
+   124→  title: string,
+   125→  description: string,
+   126→  lessons: Course["sections"][number]["lessons"][]
+   127→): Course["sections"][number] {
+   128→  return {
+   129→    id: `sec-${courseId}-${title.slice(0, 12).replace(/\s/g, "-").toLowerCase()}`,
+   130→    courseId,
+   131→    title,
+   132→    description,
+   133→    order: 0,
+   134→    lessons: lessons.map((l, i) => ({ ...l, order: i })),
+   135→  };
+   136→}
+   137→
+   138→const COURSES_DATA: Array<
+   139→  Omit<Course, "sections"> & { sections: ReturnType<typeof section>[] }
+   140→> = [
+   141→  {
+   142→    id: "course-1",
+   143→    slug: "fullstack-nextjs-mastery",
+   144→    title: "Full-Stack Mastery with Next.js 16",
+   145→    subtitle: "Build, ship & scale production-grade web apps from zero to deploy",
+   146→    description:
+   147→      "The most comprehensive Next.js 16 course on the planet. Master the App Router, Server Components, Server Actions, streaming, caching, and deployment. By the end you will architect, build, and ship a full SaaS application to production — with authentication, payments, and a real database.",
+   148→    thumbnail: "https://picsum.photos/seed/nextjs-course/800/450",
+   149→    banner: "https://picsum.photos/seed/nextjs-banner/1600/500",
+   150→    trailerUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
+   151→    previewVideo: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
+   152→    price: 4999,
+   153→    comparePrice: 12999,
+   154→    currency: "INR",
+   155→    level: "INTERMEDIATE",
+   156→    language: "English",
+   157→    durationMins: 1840,
+   158→    benefits: [
+   159→      "Architect production Next.js 16 apps with the App Router",
+   160→      "Master React Server Components & streaming UI",
+   161→      "Build a real SaaS with auth, DB, and payments",
+   162→      "Deploy to Vercel with edge runtime & ISR",
+   163→      "Write bulletproof TypeScript at scale",
+   164→      "Optimize Core Web Vitals to 95+ Lighthouse",
+   165→    ],
+   166→    requirements: [
+   167→      "Basic HTML, CSS & JavaScript",
+   168→      "A laptop with Node 20+ installed",
+   169→      "Willingness to build real projects",
+   170→    ],
+   171→    faqs: [
+   172→      { q: "How long do I have access?", a: "Lifetime access, including all future updates to the course." },
+   173→      { q: "Is there a certificate?", a: "Yes — a verifiable certificate is issued on 100% completion." },
+   174→      { q: "Do I need prior React experience?", a: "Basic React helps, but we cover everything from the ground up." },
+   175→    ],
+   176→    featured: true,
+   177→    published: true,
+   178→    rating: 4.9,
+   179→    reviewCount: 1284,
+   180→    studentCount: 9420,
+   181→    instructorId: "ins-1",
+   182→    categoryId: "cat-dev",
+   183→    tags: ["Next.js", "React", "TypeScript", "Full-Stack"],
+   184→    createdAt: "2024-08-12T10:00:00Z",
+   185→    updatedAt: "2025-01-20T10:00:00Z",
+   186→    sections: [],
+   187→  },
+   188→  {
+   189→    id: "course-2",
+   190→    slug: "data-science-bootcamp",
+   191→    title: "Data Science & Machine Learning Bootcamp",
+   192→    subtitle: "From Python basics to deploying ML models in production",
+   193→    description:
+   194→      "A career-defining bootcamp that takes you from Python fundamentals to deploying real machine learning models. Master pandas, scikit-learn, deep learning, and MLOps. Includes 5 capstone projects and a job-ready portfolio.",
+   195→    thumbnail: "https://picsum.photos/seed/datascience-course/800/450",
+   196→    banner: "https://picsum.photos/seed/datascience-banner/1600/500",
+   197→    trailerUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4",
+   198→    previewVideo: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4",
+   199→    price: 6999,
+   200→    comparePrice: 19999,
+   201→    currency: "INR",
+   202→    level: "BEGINNER",
+   203→    language: "English",
+   204→    durationMins: 2640,
+   205→    benefits: [
+   206→      "Master Python, NumPy, pandas & visualization",
+   207→      "Build & train ML models with scikit-learn",
+   208→      "Deep learning with PyTorch",
+   209→      "Deploy models with FastAPI + Docker",
+   210→      "Complete 5 portfolio-ready projects",
+   211→      "Crack data science interviews with confidence",
+   212→    ],
+   213→    requirements: [
+   214→      "No prior coding experience required",
+   215→      "Basic math (high school level)",
+   216→      "A computer with 8GB+ RAM",
+   217→    ],
+   218→    faqs: [
+   219→      { q: "Is this beginner friendly?", a: "Absolutely — we start from Python basics and build up." },
+   220→      { q: "Will I get job help?", a: "Yes — resume reviews, mock interviews, and a portfolio review." },
+   221→    ],
+   222→    featured: true,
+   223→    published: true,
+   224→    rating: 4.8,
+   225→    reviewCount: 2103,
+   226→    studentCount: 15600,
+   227→    instructorId: "ins-2",
+   228→    categoryId: "cat-data",
+   229→    tags: ["Python", "Machine Learning", "Pandas", "PyTorch"],
+   230→    createdAt: "2024-06-01T10:00:00Z",
+   231→    updatedAt: "2025-02-05T10:00:00Z",
+   232→    sections: [],
+   233→  },
+   234→  {
+   235→    id: "course-3",
+   236→    slug: "ui-ux-design-masterclass",
+   237→    title: "UI/UX Design Masterclass 2025",
+   238→    subtitle: "Design beautiful, conversion-focused products in Figma",
+   239→    description:
+   240→      "Learn the exact design process used by teams at Figma, Linear, and Stripe. From research to wireframes to polished, animated prototypes — build a design portfolio that gets you hired.",
+   241→    thumbnail: "https://picsum.photos/seed/design-course/800/450",
+   242→    banner: "https://picsum.photos/seed/design-banner/1600/500",
+   243→    trailerUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+   244→    previewVideo: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+   245→    price: 3499,
+   246→    comparePrice: 8999,
+   247→    currency: "INR",
+   248→    level: "BEGINNER",
+   249→    language: "English",
+   250→    durationMins: 1480,
+   251→    benefits: [
+   252→      "Master Figma from beginner to pro",
+   253→      "Build a design system from scratch",
+   254→      "Design conversion-focused landing pages",
+   255→      "Create animated, interactive prototypes",
+   256→      "Assemble a standout design portfolio",
+   257→      "Learn the UX research process end-to-end",
+   258→    ],
+   259→    requirements: ["A computer that runs Figma (free)", "No design experience needed"],
+   260→    faqs: [
+   261→      { q: "Do I need a paid Figma account?", a: "No — the free plan covers everything in the course." },
+   262→    ],
+   263→    featured: true,
+   264→    published: true,
+   265→    rating: 4.9,
+   266→    reviewCount: 876,
+   267→    studentCount: 7300,
+   268→    instructorId: "ins-3",
+   269→    categoryId: "cat-design",
+   270→    tags: ["Figma", "UI/UX", "Design Systems", "Prototyping"],
+   271→    createdAt: "2024-09-15T10:00:00Z",
+   272→    updatedAt: "2025-01-30T10:00:00Z",
+   273→    sections: [],
+   274→  },
+   275→  {
+   276→    id: "course-4",
+   277→    slug: "llm-engineering-rag",
+   278→    title: "LLM Engineering: RAG, Agents & Fine-Tuning",
+   279→    subtitle: "Ship production AI apps with retrieval, tools & fine-tuned models",
+   280→    description:
+   281→      "Go beyond the OpenAI playground. Build production-grade LLM applications with retrieval-augmented generation, tool-using agents, and fine-tuning. Includes vector databases, evals, and cost optimization.",
+   282→    thumbnail: "https://picsum.photos/seed/llm-course/800/450",
+   283→    banner: "https://picsum.photos/seed/llm-banner/1600/500",
+   284→    trailerUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
+   285→    previewVideo: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
+   286→    price: 7999,
+   287→    comparePrice: 24999,
+   288→    currency: "INR",
+   289→    level: "ADVANCED",
+   290→    language: "English",
+   291→    durationMins: 2160,
+   292→    benefits: [
+   293→      "Build RAG pipelines with vector databases",
+   294→      "Create tool-using autonomous agents",
+   295→      "Fine-tune open-source LLMs",
+   296→      "Set up evals & guardrails",
+   297→      "Optimize for latency & cost",
+   298→      "Deploy AI apps to production",
+   299→    ],
+   300→    requirements: [
+   301→      "Comfortable with Python",
+   302→      "Basic understanding of ML concepts",
+   303→      "Familiarity with APIs",
+   304→    ],
+   305→    faqs: [
+   306→      { q: "Do I need an OpenAI API key?", a: "We show you how to use both OpenAI and open-source models." },
+   307→    ],
+   308→    featured: true,
+   309→    published: true,
+   310→    rating: 4.9,
+   311→    reviewCount: 542,
+   312→    studentCount: 4100,
+   313→    instructorId: "ins-5",
+   314→    categoryId: "cat-ai",
+   315→    tags: ["LLM", "RAG", "AI", "PyTorch", "OpenAI"],
+   316→    createdAt: "2024-11-01T10:00:00Z",
+   317→    updatedAt: "2025-02-10T10:00:00Z",
+   318→    sections: [],
+   319→  },
+   320→  {
+   321→    id: "course-5",
+   322→    slug: "growth-marketing-pro",
+   323→    title: "Growth Marketing Pro: 0 to 1M Users",
+   324→    subtitle: "The complete playbook to acquire, activate & retain users",
+   325→    description:
+   326→      "The exact frameworks used to scale startups from zero to a million users. Master SEO, content engines, paid acquisition, lifecycle email, and analytics. Includes 30+ templates and swipe files.",
+   327→    thumbnail: "https://picsum.photos/seed/marketing-course/800/450",
+   328→    banner: "https://picsum.photos/seed/marketing-banner/1600/500",
+   329→    trailerUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4",
+   330→    previewVideo: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4",
+   331→    price: 2999,
+   332→    comparePrice: 7999,
+   333→    currency: "INR",
+   334→    level: "INTERMEDIATE",
+   335→    language: "English",
+   336→    durationMins: 1320,
+   337→    benefits: [
+   338→      "Build a content engine that compounds",
+   339→      "Master SEO from keyword to ranking",
+   340→      "Run profitable paid ad campaigns",
+   341→      "Design lifecycle email flows",
+   342→      "Set up analytics & attribution",
+   343→      "Get 30+ proven templates & swipe files",
+   344→    ],
+   345→    requirements: ["Basic marketing knowledge", "A product or idea to market"],
+   346→    faqs: [{ q: "Is this for B2B or B2C?", a: "Both — we cover frameworks applicable to each." }],
+   347→    featured: false,
+   348→    published: true,
+   349→    rating: 4.7,
+   350→    reviewCount: 634,
+   351→    studentCount: 5200,
+   352→    instructorId: "ins-4",
+   353→    categoryId: "cat-mkt",
+   354→    tags: ["Marketing", "SEO", "Growth", "Content"],
+   355→    createdAt: "2024-07-20T10:00:00Z",
+   356→    updatedAt: "2025-01-10T10:00:00Z",
+   357→    sections: [],
+   358→  },
+   359→  {
+   360→    id: "course-6",
+   361→    slug: "system-design-interview",
+   362→    title: "System Design Interview: Crack FAANG",
+   363→    subtitle: "Master distributed systems & ace your next senior interview",
+   364→    description:
+   365→      "The definitive system design course. Learn to design scalable systems like YouTube, Uber, and WhatsApp. Includes 20+ real interview questions with detailed solutions and a mock interview playbook.",
+   366→    thumbnail: "https://picsum.photos/seed/systemdesign-course/800/450",
+   367→    banner: "https://picsum.photos/seed/systemdesign-banner/1600/500",
+   368→    trailerUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4",
+   369→    previewVideo: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4",
+   370→    price: 5999,
+   371→    comparePrice: 14999,
+   372→    currency: "INR",
+   373→    level: "ADVANCED",
+   374→    language: "English",
+   375→    durationMins: 1980,
+   376→    benefits: [
+   377→      "Design scalable systems end-to-end",
+   378→      "Master caching, sharding & queues",
+   379→      "Solve 20+ real interview problems",
+   380→      "Build a repeatable interview framework",
+   381→      "Negotiate senior offers with confidence",
+   382→    ],
+   383→    requirements: ["2+ years software experience", "Basic backend knowledge"],
+   384→    faqs: [{ q: "Will this help with L5/L6 interviews?", a: "Yes — calibrated for senior/staff level loops." }],
+   385→    featured: false,
+   386→    published: true,
+   387→    rating: 4.8,
+   388→    reviewCount: 412,
+   389→    studentCount: 3800,
+   390→    instructorId: "ins-1",
+   391→    categoryId: "cat-dev",
+   392→    tags: ["System Design", "Interview", "Distributed Systems"],
+   393→    createdAt: "2024-10-05T10:00:00Z",
+   394→    updatedAt: "2025-01-25T10:00:00Z",
+   395→    sections: [],
+   396→  },
+   397→  {
+   398→    id: "course-7",
+   399→    slug: "product-management-essentials",
+   400→    title: "Product Management Essentials",
+   401→    subtitle: "From discovery to launch — ship products users love",
+   402→    description:
+   403→      "A practical PM course covering discovery, roadmapping, prioritization, metrics, and stakeholder management. Built with frameworks from Stripe, Notion, and Linear. Includes a capstone product strategy.",
+   404→    thumbnail: "https://picsum.photos/seed/product-course/800/450",
+   405→    banner: "https://picsum.photos/seed/product-banner/1600/500",
+   406→    trailerUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4",
+   407→    previewVideo: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4",
+   408→    price: 3999,
+   409→    comparePrice: 9999,
+   410→    currency: "INR",
+   411→    level: "INTERMEDIATE",
+   412→    language: "English",
+   413→    durationMins: 1180,
+   414→    benefits: [
+   415→      "Run product discovery the right way",
+   416→      "Build roadmaps stakeholders trust",
+   417→      "Prioritize with proven frameworks",
+   418→      "Define & track north-star metrics",
+   419→      "Manage up, down & across",
+   420→    ],
+   421→    requirements: ["Some product or business exposure"],
+   422→    faqs: [{ q: "Is this for aspiring PMs?", a: "Yes — also great for PMs in their first 2 years." }],
+   423→    featured: false,
+   424→    published: true,
+   425→    rating: 4.7,
+   426→    reviewCount: 318,
+   427→    studentCount: 2900,
+   428→    instructorId: "ins-6",
+   429→    categoryId: "cat-biz",
+   430→    tags: ["Product Management", "Strategy", "Metrics"],
+   431→    createdAt: "2024-12-01T10:00:00Z",
+   432→    updatedAt: "2025-02-01T10:00:00Z",
+   433→    sections: [],
+   434→  },
+   435→  {
+   436→    id: "course-8",
+   437→    slug: "advanced-tailwind-design",
+   438→    title: "Advanced Tailwind CSS & Modern UI Design",
+   439→    subtitle: "Craft stunning, accessible interfaces with Tailwind v4",
+   440→    description:
+   441→      "Level up your frontend craft. Master Tailwind v4, design tokens, glassmorphism, animations, and accessible component patterns. Build a premium SaaS dashboard from scratch.",
+   442→    thumbnail: "https://picsum.photos/seed/tailwind-course/800/450",
+   443→    banner: "https://picsum.photos/seed/tailwind-banner/1600/500",
+   444→    trailerUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4",
+   445→    previewVideo: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4",
+   446→    price: 2499,
+   447→    comparePrice: 5999,
+   448→    currency: "INR",
+   449→    level: "INTERMEDIATE",
+   450→    language: "English",
+   451→    durationMins: 940,
+   452→    benefits: [
+   453→      "Master Tailwind v4 & the new engine",
+   454→      "Build a design token system",
+   455→      "Craft glassmorphism & modern effects",
+   456→      "Animate with Framer Motion",
+   457→      "Ship an accessible SaaS dashboard",
+   458→    ],
+   459→    requirements: ["HTML & CSS basics", "Some React experience"],
+   460→    faqs: [{ q: "Do you cover dark mode?", a: "Yes — full dark mode with system detection." }],
+   461→    featured: false,
+   462→    published: true,
+   463→    rating: 4.8,
+   464→    reviewCount: 521,
+   465→    studentCount: 4600,
+   466→    instructorId: "ins-3",
+   467→    categoryId: "cat-design",
+   468→    tags: ["Tailwind", "CSS", "UI", "Animation"],
+   469→    createdAt: "2024-09-28T10:00:00Z",
+   470→    updatedAt: "2025-01-18T10:00:00Z",
+   471→    sections: [],
+   472→  },
+   473→];
+   474→
+   475→function buildSections(course: (typeof COURSES_DATA)[number]) {
+   476→  const cid = course.id;
+   477→  switch (cid) {
+   478→    case "course-1":
+   479→      return [
+   480→        section(cid, "Foundations of Next.js 16", "Get productive with the App Router fast.", [
+   481→          lesson(cid, "Welcome & Course Roadmap", "VIDEO", 8, { preview: true }),
+   482→          lesson(cid, "Project Setup & Tooling", "VIDEO", 22),
+   483→          lesson(cid, "The App Router Mental Model", "VIDEO", 28),
+   484→          lesson(cid, "Routing, Layouts & Templates", "VIDEO", 34),
+   485→          lesson(cid, "Lab: Build a Marketing Site", "VIDEO", 45),
+   486→        ]),
+   487→        section(cid, "Data & Server Components", "Fetch data the right way.", [
+   488→          lesson(cid, "Server vs Client Components", "VIDEO", 30),
+   489→          lesson(cid, "Fetching & Caching Data", "VIDEO", 36),
+   490→          lesson(cid, "Streaming & Suspense", "VIDEO", 24),
+   491→          lesson(cid, "Cheat Sheet: Data Fetching", "PDF", 5, { resourceUrl: "#" }),
+   492→        ]),
+   493→        section(cid, "Auth, DB & Server Actions", "Build a real backend.", [
+   494→          lesson(cid, "Database with Prisma", "VIDEO", 40),
+   495→          lesson(cid, "Authentication Patterns", "VIDEO", 38),
+   496→          lesson(cid, "Server Actions Deep Dive", "VIDEO", 32),
+   497→          lesson(cid, "Lab: Build a SaaS App", "VIDEO", 60),
+   498→        ]),
+   499→        section(cid, "Deploy & Optimize", "Ship to production.", [
+   500→          lesson(cid, "Deploying to Vercel", "VIDEO", 18),
+   501→          lesson(cid, "Edge Runtime & ISR", "VIDEO", 26),
+   502→          lesson(cid, "Core Web Vitals 95+", "VIDEO", 30),
+   503→          lesson(cid, "Capstone Project Brief", "DOWNLOAD", 4, { resourceUrl: "#" }),
+   504→        ]),
+   505→      ];
+   506→    case "course-2":
+   507→      return [
+   508→        section(cid, "Python for Data Science", "From zero to confident.", [
+   509→          lesson(cid, "Why Data Science in 2025", "VIDEO", 10, { preview: true }),
+   510→          lesson(cid, "Python Crash Course", "VIDEO", 45),
+   511→          lesson(cid, "NumPy Essentials", "VIDEO", 38),
+   512→          lesson(cid, "pandas Deep Dive", "VIDEO", 52),
+   513→        ]),
+   514→        section(cid, "Statistics & Visualization", "Make sense of data.", [
+   515→          lesson(cid, "Descriptive Statistics", "VIDEO", 34),
+   516→          lesson(cid, "Probability Distributions", "VIDEO", 40),
+   517→          lesson(cid, "Matplotlib & Seaborn", "VIDEO", 36),
+   518→          lesson(cid, "EDA Project", "VIDEO", 50),
+   519→        ]),
+   520→        section(cid, "Machine Learning", "Train your first models.", [
+   521→          lesson(cid, "Regression & Classification", "VIDEO", 48),
+   522→          lesson(cid, "scikit-learn in Practice", "VIDEO", 42),
+   523→          lesson(cid, "Model Evaluation", "VIDEO", 30),
+   524→          lesson(cid, "Capstone: Predict House Prices", "VIDEO", 55),
+   525→        ]),
+   526→        section(cid, "Deep Learning & Deployment", "Go pro.", [
+   527→          lesson(cid, "Neural Networks with PyTorch", "VIDEO", 60),
+   528→          lesson(cid, "Deploying Models with FastAPI", "VIDEO", 45),
+   529→          lesson(cid, "MLOps Basics", "VIDEO", 38),
+   530→        ]),
+   531→      ];
+   532→    case "course-3":
+   533→      return [
+   534→        section(cid, "Design Fundamentals", "Think like a designer.", [
+   535→          lesson(cid, "The Design Process", "VIDEO", 12, { preview: true }),
+   536→          lesson(cid, "Color, Type & Spacing", "VIDEO", 28),
+   537→          lesson(cid, "Visual Hierarchy", "VIDEO", 22),
+   538→        ]),
+   539→        section(cid, "Figma Mastery", "Become fast & fluent.", [
+   540→          lesson(cid, "Figma Interface Tour", "VIDEO", 18),
+   541→          lesson(cid, "Auto Layout & Components", "VIDEO", 40),
+   542→          lesson(cid, "Variants & Design Tokens", "VIDEO", 32),
+   543→          lesson(cid, "Prototyping & Animation", "VIDEO", 36),
+   544→        ]),
+   545→        section(cid, "Building a Design System", "Scale your craft.", [
+   546→          lesson(cid, "Tokens & Themes", "VIDEO", 30),
+   547→          lesson(cid, "Component Library", "VIDEO", 44),
+   548→          lesson(cid, "Documentation", "VIDEO", 20),
+   549→        ]),
+   550→        section(cid, "Portfolio & Career", "Get hired.", [
+   551→          lesson(cid, "Portfolio Case Studies", "VIDEO", 34),
+   552→          lesson(cid, "Interview Prep", "VIDEO", 28),
+   553→        ]),
+   554→      ];
+   555→    case "course-4":
+   556→      return [
+   557→        section(cid, "LLM Foundations", "Understand the stack.", [
+   558→          lesson(cid, "How LLMs Work", "VIDEO", 22, { preview: true }),
+   559→          lesson(cid, "Tokens, Embeddings & Context", "VIDEO", 30),
+   560→          lesson(cid, "Prompt Engineering Patterns", "VIDEO", 28),
+   561→        ]),
+   562→        section(cid, "Retrieval-Augmented Generation", "Ground your models.", [
+   563→          lesson(cid, "Vector Databases", "VIDEO", 34),
+   564→          lesson(cid, "Building a RAG Pipeline", "VIDEO", 46),
+   565→          lesson(cid, "Chunking & Retrieval Strategies", "VIDEO", 38),
+   566→          lesson(cid, "Lab: Docs Q&A Bot", "VIDEO", 50),
+   567→        ]),
+   568→        section(cid, "Agents & Tools", "Build autonomous systems.", [
+   569→          lesson(cid, "Tool-Using Agents", "VIDEO", 40),
+   570→          lesson(cid, "Multi-Agent Orchestration", "VIDEO", 44),
+   571→          lesson(cid, "Memory & Planning", "VIDEO", 32),
+   572→        ]),
+   573→        section(cid, "Fine-Tuning & Production", "Ship it.", [
+   574→          lesson(cid, "Fine-Tuning Open Models", "VIDEO", 52),
+   575→          lesson(cid, "Evals & Guardrails", "VIDEO", 36),
+   576→          lesson(cid, "Cost & Latency Optimization", "VIDEO", 30),
+   577→        ]),
+   578→      ];
+   579→    case "course-5":
+   580→      return [
+   581→        section(cid, "Growth Foundations", "The GTM mindset.", [
+   582→          lesson(cid, "The Growth Funnel", "VIDEO", 14, { preview: true }),
+   583→          lesson(cid, "Setting North-Star Metrics", "VIDEO", 22),
+   584→        ]),
+   585→        section(cid, "SEO & Content", "Build a compounding engine.", [
+   586→          lesson(cid, "Keyword Research", "VIDEO", 30),
+   587→          lesson(cid, "Content That Ranks", "VIDEO", 34),
+   588→          lesson(cid, "Technical SEO", "VIDEO", 28),
+   589→        ]),
+   590→        section(cid, "Paid Acquisition", "Buy growth profitably.", [
+   591→          lesson(cid, "Google & Meta Ads", "VIDEO", 40),
+   592→          lesson(cid, "Creative Testing", "VIDEO", 26),
+   593→          lesson(cid, "Attribution", "VIDEO", 24),
+   594→        ]),
+   595→        section(cid, "Lifecycle & Retention", "Keep users coming back.", [
+   596→          lesson(cid, "Email & Lifecycle Flows", "VIDEO", 32),
+   597→          lesson(cid, "Retention Frameworks", "VIDEO", 28),
+   598→        ]),
+   599→      ];
+   600→    case "course-6":
+   601→      return [
+   602→        section(cid, "System Design Primer", "The fundamentals.", [
+   603→          lesson(cid, "What Interviewers Evaluate", "VIDEO", 16, { preview: true }),
+   604→          lesson(cid, "A Repeatable Framework", "VIDEO", 24),
+   605→        ]),
+   606→        section(cid, "Core Concepts", "Building blocks.", [
+   607→          lesson(cid, "Scaling & Load Balancing", "VIDEO", 34),
+   608→          lesson(cid, "Caching Strategies", "VIDEO", 30),
+   609→          lesson(cid, "Databases & Sharding", "VIDEO", 38),
+   610→          lesson(cid, "Queues & Async Processing", "VIDEO", 28),
+   611→        ]),
+   612→        section(cid, "Real Interview Problems", "Practice makes perfect.", [
+   613→          lesson(cid, "Design YouTube", "VIDEO", 48),
+   614→          lesson(cid, "Design Uber", "VIDEO", 44),
+   615→          lesson(cid, "Design WhatsApp", "VIDEO", 42),
+   616→          lesson(cid, "Design a Rate Limiter", "VIDEO", 30),
+   617→        ]),
+   618→      ];
+   619→    case "course-7":
+   620→      return [
+   621→        section(cid, "Product Discovery", "Find problems worth solving.", [
+   622→          lesson(cid, "The PM Role", "VIDEO", 12, { preview: true }),
+   623→          lesson(cid, "Customer Interviews", "VIDEO", 26),
+   624→          lesson(cid, "Opportunity Solution Tree", "VIDEO", 24),
+   625→        ]),
+   626→        section(cid, "Roadmapping & Prioritization", "Plan with confidence.", [
+   627→          lesson(cid, "Roadmaps That Work", "VIDEO", 28),
+   628→          lesson(cid, "Prioritization Frameworks", "VIDEO", 24),
+   629→        ]),
+   630→        section(cid, "Metrics & Launch", "Ship & measure.", [
+   631→          lesson(cid, "North-Star & Input Metrics", "VIDEO", 22),
+   632→          lesson(cid, "Go-To-Market", "VIDEO", 26),
+   633→          lesson(cid, "Stakeholder Management", "VIDEO", 24),
+   634→        ]),
+   635→      ];
+   636→    case "course-8":
+   637→      return [
+   638→        section(cid, "Tailwind v4 Engine", "The new way.", [
+   639→          lesson(cid, "Why Tailwind v4", "VIDEO", 14, { preview: true }),
+   640→          lesson(cid, "Config-Less Setup", "VIDEO", 20),
+   641→          lesson(cid, "Design Tokens in CSS", "VIDEO", 26),
+   642→        ]),
+   643→        section(cid, "Modern UI Patterns", "Craft premium interfaces.", [
+   644→          lesson(cid, "Glassmorphism & Gradients", "VIDEO", 28),
+   645→          lesson(cid, "Dark Mode Done Right", "VIDEO", 22),
+   646→          lesson(cid, "Responsive by Default", "VIDEO", 24),
+   647→        ]),
+   648→        section(cid, "Animation & Components", "Bring it to life.", [
+   649→          lesson(cid, "Framer Motion Essentials", "VIDEO", 32),
+   650→          lesson(cid, "Accessible Components", "VIDEO", 30),
+   651→          lesson(cid, "Lab: SaaS Dashboard", "VIDEO", 50),
+   652→        ]),
+   653→      ];
+   654→    default:
+   655→      return [
+   656→        section(cid, "Getting Started", "Begin here.", [
+   657→          lesson(cid, "Welcome", "VIDEO", 8, { preview: true }),
+   658→          lesson(cid, "Course Overview", "VIDEO", 12),
+   659→        ]),
+   660→      ];
+   661→  }
+   662→}
+   663→
+   664→export const courses: Course[] = COURSES_DATA.map((c) => ({
+   665→  ...c,
+   666→  sections: buildSections(c),
+   667→}));
+   668→
+   669→export const courseMap = Object.fromEntries(courses.map((c) => [c.id, c]));
+   670→export const courseBySlug = Object.fromEntries(courses.map((c) => [c.slug, c]));
+   671→
+   672→export function courseStats(course: Course) {
+   673→  const lessonCount = course.sections.reduce((n, s) => n + s.lessons.length, 0);
+   674→  const duration = course.sections.reduce(
+   675→    (n, s) => n + s.lessons.reduce((m, l) => m + l.durationMins, 0),
+   676→    0
+   677→  );
+   678→  return { lessonCount, duration };
+   679→}
+   680→
+   681→// ---------------------------------------------------------------------------
+   682→// TESTIMONIALS
+   683→// ---------------------------------------------------------------------------
+   684→export const testimonials: Testimonial[] = [
+   685→  {
+   686→    id: "t1",
+   687→    name: "Karthik R.",
+   688→    role: "Senior Engineer @ Atlassian",
+   689→    avatar: "https://i.pravatar.cc/120?img=8",
+   690→    quote:
+   691→      "I went from a junior dev to a senior engineer at Atlassian in 14 months. The Next.js course alone was worth 10x the price.",
+   692→    rating: 5,
+   693→    featured: true,
+   694→    order: 1,
+   695→  },
+   696→  {
+   697→    id: "t2",
+   698→    name: "Divya S.",
+   699→    role: "Data Scientist @ Swiggy",
+   700→    avatar: "https://i.pravatar.cc/120?img=41",
+   701→    quote:
+   702→      "The data science bootcamp got me my dream job. The capstone projects became my entire interview portfolio.",
+   703→    rating: 5,
+   704→    featured: true,
+   705→    order: 2,
+   706→  },
+   707→  {
+   708→    id: "t3",
+   709→    name: "Arjun P.",
+   710→    role: "Founder @ LumenAI",
+   711→    avatar: "https://i.pravatar.cc/120?img=14",
+   712→    quote:
+   713→      "The LLM engineering course let me ship our RAG product in 3 weeks. The production patterns are gold.",
+   714→    rating: 5,
+   715→    featured: true,
+   716→    order: 3,
+   717→  },
+   718→  {
+   719→    id: "t4",
+   720→    name: "Meera K.",
+   721→    role: "Product Designer @ Razorpay",
+   722→    avatar: "https://i.pravatar.cc/120?img=49",
+   723→    quote:
+   724→      "Best design course I've taken. The Figma mastery section completely transformed my workflow.",
+   725→    rating: 5,
+   726→    featured: true,
+   727→    order: 4,
+   728→  },
+   729→  {
+   730→    id: "t5",
+   731→    name: "Rahul V.",
+   732→    role: "Growth Lead @ Cred",
+   733→    avatar: "https://i.pravatar.cc/120?img=11",
+   734→    quote:
+   735→      "We 3x'd our signups in 60 days using the SEO framework from this course. Undeniable ROI.",
+   736→    rating: 5,
+   737→    featured: true,
+   738→    order: 5,
+   739→  },
+   740→  {
+   741→    id: "t6",
+   742→    name: "Ishita G.",
+   743→    role: "PM @ PhonePe",
+   744→    avatar: "https://i.pravatar.cc/120?img=32",
+   745→    quote:
+   746→      "The PM course gave me the frameworks I use every single day. Promoted to Sr PM within a year.",
+   747→    rating: 5,
+   748→    featured: true,
+   749→    order: 6,
+   750→  },
+   751→];
+   752→
+   753→// ---------------------------------------------------------------------------
+   754→// COUPONS
+   755→// ---------------------------------------------------------------------------
+   756→export const coupons: Coupon[] = [
+   757→  {
+   758→    id: "cp-1",
+   759→    code: "WELCOME50",
+   760→    type: "PERCENT",
+   761→    value: 50,
+   762→    startsAt: "2025-01-01T00:00:00Z",
+   763→    expiresAt: "2025-12-31T23:59:59Z",
+   764→    usageLimit: 1000,
+   765→    usedCount: 142,
+   766→    perUserLimit: 1,
+   767→    minAmount: 0,
+   768→    active: true,
+   769→  },
+   770→  {
+   771→    id: "cp-2",
+   772→    code: "SAVE1000",
+   773→    type: "FIXED",
+   774→    value: 1000,
+   775→    startsAt: "2025-01-01T00:00:00Z",
+   776→    expiresAt: "2025-12-31T23:59:59Z",
+   777→    usageLimit: 500,
+   778→    usedCount: 88,
+   779→    perUserLimit: 1,
+   780→    minAmount: 2999,
+   781→    active: true,
+   782→  },
+   783→  {
+   784→    id: "cp-3",
+   785→    code: "LAUNCH25",
+   786→    type: "PERCENT",
+   787→    value: 25,
+   788→    courseId: "course-4",
+   789→    startsAt: "2025-01-01T00:00:00Z",
+   790→    expiresAt: "2025-06-30T23:59:59Z",
+   791→    usageLimit: 200,
+   792→    usedCount: 33,
+   793→    perUserLimit: 1,
+   794→    minAmount: 0,
+   795→    active: true,
+   796→  },
+   797→  {
+   798→    id: "cp-4",
+   799→    code: "EXPIRED10",
+   800→    type: "PERCENT",
+   801→    value: 10,
+   802→    startsAt: "2024-01-01T00:00:00Z",
+   803→    expiresAt: "2024-06-30T23:59:59Z",
+   804→    usedCount: 50,
+   805→    perUserLimit: 1,
+   806→    minAmount: 0,
+   807→    active: false,
+   808→  },
+   809→];
+   810→
+   811→export const couponMap = Object.fromEntries(coupons.map((c) => [c.code, c]));
+   812→
+   813→// ---------------------------------------------------------------------------
+   814→// BLOG POSTS
+   815→// ---------------------------------------------------------------------------
+   816→export const blogPosts: BlogPost[] = [
+   817→  {
+   818→    id: "bp-1",
+   819→    slug: "why-server-components-change-everything",
+   820→    title: "Why React Server Components Change Everything",
+   821→    excerpt:
+   822→      "RSCs are the biggest shift in React's history. Here's a practical mental model for thinking about server and client components.",
+   823→    content:
+   824→      "## The Mental Shift\n\nReact Server Components (RSC) blur the line between server and client. Instead of choosing 'frontend' or 'backend,' you choose per-component where code runs.\n\n### The Rule of Thumb\n\n- **Server Components** fetch data, render static markup, and never ship JS to the client.\n- **Client Components** handle interactivity, state, and browser APIs.\n\n### When to Use Which\n\nDefault to Server Components. Reach for `'use client'` only when you need state, effects, or event handlers.\n\n> Ship less JavaScript. Render faster. Rank higher.\n\n## Conclusion\n\nRSCs let you build rich apps that stay fast. Master the boundary and you master modern React.",
+   825→    coverImage: "https://picsum.photos/seed/blog-rsc/1200/600",
+   826→    authorName: "Aarav Mehta",
+   827→    authorAvatar: "https://i.pravatar.cc/120?img=12",
+   828→    category: "Web Development",
+   829→    tags: ["React", "Next.js", "RSC"],
+   830→    status: "PUBLISHED",
+   831→    publishedAt: "2025-01-22T10:00:00Z",
+   832→    createdAt: "2025-01-22T10:00:00Z",
+   833→    updatedAt: "2025-01-22T10:00:00Z",
+   834→    views: 8420,
+   835→    readingMins: 6,
+   836→  },
+   837→  {
+   838→    id: "bp-2",
+   839→    slug: "rag-vs-finetuning-when-to-use-what",
+   840→    title: "RAG vs Fine-Tuning: When to Use What",
+   841→    excerpt:
+   842→      "The two most powerful techniques for customizing LLMs are often confused. Here's a decision framework.",
+   843→    content:
+   844→      "## The Short Answer\n\nUse **RAG** when your data changes often or you need citations. Use **fine-tuning** when you need to change the model's style, tone, or format.\n\n### RAG Strengths\n\n- Always up-to-date\n- Source attribution\n- No GPU training needed\n\n### Fine-Tuning Strengths\n\n- Style & format control\n- Lower latency at inference\n- Cheaper per-token after training\n\n## A Practical Framework\n\n1. Start with prompt engineering\n2. Add RAG for knowledge\n3. Fine-tune for behavior\n\n> Don't fine-tune what RAG can solve.",
+   845→    coverImage: "https://picsum.photos/seed/blog-llm/1200/600",
+   846→    authorName: "Vikram Joshi",
+   847→    authorAvatar: "https://i.pravatar.cc/120?img=15",
+   848→    category: "AI & Machine Learning",
+   849→    tags: ["LLM", "RAG", "Fine-tuning"],
+   850→    status: "PUBLISHED",
+   851→    publishedAt: "2025-02-08T10:00:00Z",
+   852→    createdAt: "2025-02-08T10:00:00Z",
+   853→    updatedAt: "2025-02-08T10:00:00Z",
+   854→    views: 6230,
+   855→    readingMins: 5,
+   856→  },
+   857→  {
+   858→    id: "bp-3",
+   859→    slug: "design-tokens-that-scale",
+   860→    title: "Design Tokens That Actually Scale",
+   861→    excerpt:
+   862→      "Most token systems break at scale. Here's how to structure yours so it survives a 50-person team.",
+   863→    content:
+   864→      "## The Three Layers\n\n1. **Primitive** — raw values (`emerald-500`)\n2. **Semantic** — meaning (`color-success`)\n3. **Component** — usage (`button-bg-success`)\n\n### Why This Matters\n\nSemantic tokens let you retheme without touching components. Component tokens let you rebrand without touching primitives.\n\n## Conclusion\n\nThe secret to scaling design systems is indirection.",
+   865→    coverImage: "https://picsum.photos/seed/blog-design/1200/600",
+   866→    authorName: "Rohan Kapoor",
+   867→    authorAvatar: "https://i.pravatar.cc/120?img=33",
+   868→    category: "Design",
+   869→    tags: ["Design Systems", "Tokens", "Figma"],
+   870→    status: "PUBLISHED",
+   871→    publishedAt: "2025-01-30T10:00:00Z",
+   872→    createdAt: "2025-01-30T10:00:00Z",
+   873→    updatedAt: "2025-01-30T10:00:00Z",
+   874→    views: 4510,
+   875→    readingMins: 4,
+   876→  },
+   877→  {
+   878→    id: "bp-4",
+   879→    slug: "seo-content-engine-playbook",
+   880→    title: "The SEO Content Engine Playbook",
+   881→    excerpt:
+   882→      "How we built a content engine that drove 1M organic visits in 12 months — and how you can too.",
+   883→    content:
+   884→      "## The Engine\n\nGreat SEO content is a system, not an accident. It has four parts:\n\n1. **Keyword research** — find demand\n2. **Content production** — meet demand\n3. **Technical SEO** — be crawlable\n4. **Link building** — earn authority\n\n## The 80/20\n\n80% of results come from topic clusters. Build a pillar page, then 10 supporting articles that all link back.\n\n> Compound content beats viral content every time.",
+   885→    coverImage: "https://picsum.photos/seed/blog-seo/1200/600",
+   886→    authorName: "Sneha Reddy",
+   887→    authorAvatar: "https://i.pravatar.cc/120?img=45",
+   888→    category: "Marketing",
+   889→    tags: ["SEO", "Content", "Growth"],
+   890→    status: "PUBLISHED",
+   891→    publishedAt: "2025-02-01T10:00:00Z",
+   892→    createdAt: "2025-02-01T10:00:00Z",
+   893→    updatedAt: "2025-02-01T10:00:00Z",
+   894→    views: 5180,
+   895→    readingMins: 7,
+   896→  },
+   897→];
+   898→
+   899→export const blogBySlug = Object.fromEntries(blogPosts.map((b) => [b.slug, b]));
+   900→
+   901→// ---------------------------------------------------------------------------
+   902→// PUBLIC FAQ (landing page)
+   903→// ---------------------------------------------------------------------------
+   904→export const siteFaqs = [
+   905→  {
+   906→    q: "How does course access work?",
+   907→    a: "Once your enrollment is approved, you get instant, lifetime access to all lessons, resources, and future updates — on web and mobile.",
+   908→  },
+   909→  {
+   910→    q: "What payment methods do you accept?",
+   911→    a: "Payments are verified securely through our external verification system. After payment, submit your transaction reference and our team verifies and grants access — typically within minutes.",
+   912→  },
+   913→  {
+   914→    q: "Do I get a certificate?",
+   915→    a: "Yes! Complete any course to earn a verifiable digital certificate with a unique verification ID, downloadable as PDF.",
+   916→  },
+   917→  {
+   918→    q: "Can I get a refund?",
+   919→    a: "We offer a 7-day no-questions-asked refund window. If a course isn't right for you, request a refund from your dashboard.",
+   920→  },
+   921→  {
+   922→    q: "Are there EMI options?",
+   923→    a: "Yes — most courses above ₹2,999 support 3 and 6-month no-cost EMI through our payment partner.",
+   924→  },
+   925→  {
+   926→    q: "Do courses work on mobile?",
+   927→    a: "Absolutely. The entire learning experience is mobile-optimized with offline-friendly lesson formats.",
+   928→  },
+   929→];
+   930→
+   931→// ---------------------------------------------------------------------------
+   932→// PLATFORM STATS
+   933→// ---------------------------------------------------------------------------
+   934→export const platformStats = {
+   935→  students: 95000,
+   936→  courses: courses.length,
+   937→  instructors: instructors.length,
+   938→  countries: 42,
+   939→  rating: 4.8,
+   940→  completionRate: 87,
+   941→  hoursOfContent: Math.round(
+   942→    courses.reduce((n, c) => n + c.durationMins, 0) / 60
+   943→  ),
+   944→};
+   945→
+   946→export const featuredReviews = [
+   947→  {
+   948→    id: "r1",
+   949→    userName: "Sanjay M.",
+   950→    userAvatar: "https://i.pravatar.cc/80?img=5",
+   951→    courseId: "course-1",
+   952→    rating: 5,
+   953→    comment: "Genuinely the best course I've taken. The production quality and depth are unmatched.",
+   954→    date: "2025-02-01",
+   955→    featured: true,
+   956→  },
+   957→  {
+   958→    id: "r2",
+   959→    userName: "Fatima A.",
+   960→    userAvatar: "https://i.pravatar.cc/80?img=25",
+   961→    courseId: "course-2",
+   962→    rating: 5,
+   963→    comment: "Landed a data scientist role at a unicorn. The capstones were exactly what recruiters wanted to see.",
+   964→    date: "2025-01-28",
+   965→    featured: true,
+   966→  },
+   967→  {
+   968→    id: "r3",
+   969→    userName: "Nikhil T.",
+   970→    userAvatar: "https://i.pravatar.cc/80?img=18",
+   971→    courseId: "course-6",
+   972→    rating: 5,
+   973→    comment: "Cleared my staff engineer loop at Meta. The system design framework is gold.",
+   974→    date: "2025-02-03",
+   975→    featured: true,
+   976→  },
+   977→];
+   978→

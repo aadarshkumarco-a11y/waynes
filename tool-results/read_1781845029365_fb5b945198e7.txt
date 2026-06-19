@@ -1,0 +1,894 @@
+     1→"use client";
+     2→
+     3→import { create } from "zustand";
+     4→import { persist, createJSONStorage } from "zustand/middleware";
+     5→import type {
+     6→  ActivityLog,
+     7→  AdminTab,
+     8→  Announcement,
+     9→  ApplyCouponResult,
+    10→  Bookmark,
+    11→  CartItem,
+    12→  Certificate,
+    13→  Coupon,
+    14→  Enrollment,
+    15→  LessonNote,
+    16→  Notification,
+    17→  Order,
+    18→  OrderStatus,
+    19→  User,
+    20→  ViewName,
+    21→} from "@/lib/types";
+    22→import { couponMap, coupons as seedCoupons, courseMap } from "@/lib/data/catalog";
+    23→import {
+    24→  generateOrderNumber,
+    25→  generateVerifyId,
+    26→  timeAgo,
+    27→} from "@/lib/format";
+    28→
+    29→// ---------------------------------------------------------------------------
+    30→// DEMO SEED DATA (so dashboards look alive on first load)
+    31→// ---------------------------------------------------------------------------
+    32→const DEMO_USER: User = {
+    33→  id: "user-demo",
+    34→  email: "alex@learniverse.io",
+    35→  name: "Alex Sharma",
+    36→  avatar: "https://i.pravatar.cc/120?img=68",
+    37→  role: "STUDENT",
+    38→  title: "Lifelong Learner",
+    39→  provider: "email",
+    40→  emailVerified: true,
+    41→};
+    42→
+    43→const DEMO_ADMIN: User = {
+    44→  id: "user-admin",
+    45→  email: "admin@learniverse.io",
+    46→  name: "Admin",
+    47→  avatar: "https://i.pravatar.cc/120?img=60",
+    48→  role: "SUPER_ADMIN",
+    49→  title: "Platform Administrator",
+    50→  provider: "email",
+    51→  emailVerified: true,
+    52→};
+    53→
+    54→function iso(offsetMin = 0): string {
+    55→  return new Date(Date.now() + offsetMin * 60000).toISOString();
+    56→}
+    57→
+    58→function seedOrders(): Order[] {
+    59→  const now = Date.now();
+    60→  const mk = (
+    61→    daysAgo: number,
+    62→    status: OrderStatus,
+    63→    courseId: string,
+    64→    userName: string,
+    65→    userEmail: string,
+    66→    couponCode?: string,
+    67→    discount = 0
+    68→  ): Order => {
+    69→    const course = courseMap[courseId];
+    70→    const created = new Date(now - daysAgo * 86400000).toISOString();
+    71→    const timeline: Order["timeline"] = [
+    72→      { id: "t1", label: "Order created", at: created, status: "PENDING" },
+    73→    ];
+    74→    if (status !== "PENDING") {
+    75→      timeline.push({
+    76→        id: "t2",
+    77→        label: `Order ${status.toLowerCase()}`,
+    78→        at: new Date(new Date(created).getTime() + 3600000).toISOString(),
+    79→        status,
+    80→      });
+    81→    }
+    82→    return {
+    83→      id: `seed-ord-${courseId}-${userName}`,
+    84→      orderNumber: generateOrderNumber(),
+    85→      userId: `seed-user-${userName}`,
+    86→      userEmail,
+    87→      userName,
+    88→      courseId,
+    89→      courseTitle: course.title,
+    90→      courseThumbnail: course.thumbnail,
+    91→      amount: course.price,
+    92→      discount,
+    93→      finalAmount: course.price - discount,
+    94→      currency: course.currency,
+    95→      status,
+    96→      couponCode,
+    97→      paymentRef: `TXN${Math.floor(Math.random() * 1e9)}`,
+    98→      paymentMethod: ["UPI", "BANK", "CARD"][Math.floor(Math.random() * 3)],
+    99→      notes: [],
+   100→      timeline,
+   101→      createdAt: created,
+   102→      approvedAt: status === "APPROVED" ? new Date(new Date(created).getTime() + 3600000).toISOString() : undefined,
+   103→      rejectedAt: status === "REJECTED" ? new Date(new Date(created).getTime() + 7200000).toISOString() : undefined,
+   104→    };
+   105→  };
+   106→  return [
+   107→    mk(0, "PENDING", "course-1", "Riya Bose", "riya@gmail.com"),
+   108→    mk(0, "PENDING", "course-4", "Sam Das", "sam@gmail.com", "LAUNCH25", 2000),
+   109→    mk(1, "APPROVED", "course-2", "Karan Shah", "karan@gmail.com"),
+   110→    mk(1, "APPROVED", "course-1", "Neha Rao", "neha@gmail.com", "WELCOME50", 2500),
+   111→    mk(2, "APPROVED", "course-3", "Farhan Q", "farhan@gmail.com"),
+   112→    mk(3, "REJECTED", "course-6", "Pooja N", "pooja@gmail.com"),
+   113→    mk(4, "APPROVED", "course-4", "Vivek T", "vivek@gmail.com"),
+   114→    mk(5, "APPROVED", "course-5", "Anita G", "anita@gmail.com"),
+   115→    mk(6, "REFUNDED", "course-7", "Manish K", "manish@gmail.com"),
+   116→    mk(8, "APPROVED", "course-8", "Sara M", "sara@gmail.com"),
+   117→  ];
+   118→}
+   119→
+   120→function seedNotifications(): Notification[] {
+   121→  return [
+   122→    {
+   123→      id: "n1",
+   124→      type: "ANNOUNCEMENT",
+   125→      title: "New course launched: LLM Engineering",
+   126→      body: "Master RAG, agents & fine-tuning. Early-bird 50% off this week.",
+   127→      link: "course-4",
+   128→      read: false,
+   129→      createdAt: iso(-30),
+   130→    },
+   131→    {
+   132→      id: "n2",
+   133→      type: "SUCCESS",
+   134→      title: "Welcome to Learniverse 🎉",
+   135→      body: "Your learning journey starts now. Explore 8 world-class courses.",
+   136→      read: false,
+   137→      createdAt: iso(-120),
+   138→    },
+   139→    {
+   140→      id: "n3",
+   141→      type: "INFO",
+   142→      title: "Weekly study reminder",
+   143→      body: "Consistency beats intensity. Log in and finish a lesson today!",
+   144→      read: true,
+   145→      createdAt: iso(-1440),
+   146→    },
+   147→  ];
+   148→}
+   149→
+   150→function seedAnnouncements(): Announcement[] {
+   151→  return [
+   152→    {
+   153→      id: "an1",
+   154→      title: "Live workshop: Building RAG apps with Next.js",
+   155→      body: "Join us this Saturday for a 2-hour live workshop. Free for all enrolled students.",
+   156→      audience: "STUDENTS",
+   157→      pinned: true,
+   158→      active: true,
+   159→      createdAt: iso(-240),
+   160→    },
+   161→    {
+   162→      id: "an2",
+   163→      title: "Holiday sale — 50% off all courses",
+   164→      body: "Use code WELCOME50 at checkout. Valid until Dec 31.",
+   165→      audience: "ALL",
+   166→      pinned: false,
+   167→      active: true,
+   168→      createdAt: iso(-2880),
+   169→    },
+   170→  ];
+   171→}
+   172→
+   173→function seedActivities(): ActivityLog[] {
+   174→  return [
+   175→    { id: "a1", userName: "Admin", action: "ORDER_APPROVED", detail: "Approved order for Data Science Bootcamp", createdAt: iso(-60), ip: "103.21.x.x" },
+   176→    { id: "a2", userName: "Riya Bose", action: "ORDER_CREATED", detail: "Created pending order for Next.js Mastery", createdAt: iso(-90), ip: "49.36.x.x" },
+   177→    { id: "a3", userName: "Admin", action: "COUPON_CREATED", detail: "Created coupon WELCOME50 (50% off)", createdAt: iso(-300), ip: "103.21.x.x" },
+   178→    { id: "a4", userName: "Admin", action: "ORDER_REJECTED", detail: "Rejected order for System Design Interview", createdAt: iso(-600), ip: "103.21.x.x" },
+   179→    { id: "a5", userName: "Karan Shah", action: "LESSON_COMPLETED", detail: "Completed lesson 'Python Crash Course'", createdAt: iso(-720), ip: "49.36.x.x" },
+   180→  ];
+   181→}
+   182→
+   183→// Demo enrollments + progress for the demo student so My Learning has content
+   184→function seedEnrollments(): Enrollment[] {
+   185→  return [
+   186→    {
+   187→      id: "enr-1",
+   188→      userId: "user-demo",
+   189→      courseId: "course-1",
+   190→      progress: 62,
+   191→      completed: false,
+   192→      enrolledAt: iso(-4320),
+   193→      lastViewedLessonId: "lsn-6",
+   194→      lastViewedAt: iso(-180),
+   195→    },
+   196→    {
+   197→      id: "enr-2",
+   198→      userId: "user-demo",
+   199→      courseId: "course-8",
+   200→      progress: 100,
+   201→      completed: true,
+   202→      enrolledAt: iso(-10080),
+   203→      lastViewedLessonId: "lsn-30",
+   204→      lastViewedAt: iso(-2880),
+   205→    },
+   206→  ];
+   207→}
+   208→
+   209→function seedCertificates(): Certificate[] {
+   210→  const course = courseMap["course-8"];
+   211→  return [
+   212→    {
+   213→      id: "cert-1",
+   214→      verifyId: "LMS-TK8X4A-2Q9B",
+   215→      userId: "user-demo",
+   216→      courseId: "course-8",
+   217→      candidateName: "Alex Sharma",
+   218→      courseTitle: course.title,
+   219→      instructorName: "Rohan Kapoor",
+   220→      score: 98,
+   221→      issuedAt: iso(-2880),
+   222→    },
+   223→  ];
+   224→}
+   225→
+   226→// ---------------------------------------------------------------------------
+   227→// STORE TYPES
+   228→// ---------------------------------------------------------------------------
+   229→interface NavState {
+   230→  view: ViewName;
+   231→  courseSlug: string | null;
+   232→  lessonId: string | null;
+   233→  blogSlug: string | null;
+   234→  certificateId: string | null;
+   235→  adminTab: AdminTab;
+   236→  checkoutCourseId: string | null;
+   237→  searchQuery: string;
+   238→  mobileMenuOpen: boolean;
+   239→}
+   240→
+   241→interface AuthState {
+   242→  user: User | null;
+   243→  authOpen: boolean;
+   244→  authMode: "login" | "signup" | "forgot";
+   245→}
+   246→
+   247→interface CartState {
+   248→  items: CartItem[];
+   249→  appliedCouponCode: string | null;
+   250→}
+   251→
+   252→interface LmsState extends NavState, AuthState, CartState {
+   253→  orders: Order[];
+   254→  enrollments: Enrollment[];
+   255→  notes: LessonNote[];
+   256→  bookmarks: Bookmark[];
+   257→  certificates: Certificate[];
+   258→  notifications: Notification[];
+   259→  announcements: Announcement[];
+   260→  activities: ActivityLog[];
+   261→  couponList: Coupon[]; // admin-managed copy
+   262→
+   263→  // Navigation
+   264→  navigate: (view: ViewName, params?: Partial<NavState>) => void;
+   265→  openCourse: (slug: string) => void;
+   266→  openLesson: (courseSlug: string, lessonId: string) => void;
+   267→  openBlog: (slug: string) => void;
+   268→  openCertificate: (verifyId: string) => void;
+   269→  openCheckout: (courseId: string) => void;
+   270→  setAdminTab: (tab: AdminTab) => void;
+   271→  setSearchQuery: (q: string) => void;
+   272→  setMobileMenuOpen: (open: boolean) => void;
+   273→  scrollTop: () => void;
+   274→
+   275→  // Auth
+   276→  setAuthOpen: (open: boolean, mode?: "login" | "signup" | "forgot") => void;
+   277→  login: (email: string, password: string) => { ok: boolean; message: string };
+   278→  signup: (name: string, email: string, password: string) => { ok: boolean; message: string };
+   279→  loginWithGoogle: () => void;
+   280→  logout: () => void;
+   281→  enterAdminDemo: () => void;
+   282→  enterStudentDemo: () => void;
+   283→  resetPassword: (email: string) => { ok: boolean; message: string };
+   284→
+   285→  // Cart
+   286→  addToCart: (courseId: string) => void;
+   287→  removeFromCart: (courseId: string) => void;
+   288→  clearCart: () => void;
+   289→  isInCart: (courseId: string) => boolean;
+   290→
+   291→  // Coupons
+   292→  applyCoupon: (code: string, amount: number, courseId?: string) => ApplyCouponResult;
+   293→  removeCoupon: () => void;
+   294→  validateCoupon: (code: string, amount: number, courseId?: string) => ApplyCouponResult;
+   295→  toggleCouponActive: (id: string) => void;
+   296→  addCoupon: (c: Omit<Coupon, "id" | "usedCount">) => void;
+   297→  deleteCoupon: (id: string) => void;
+   298→
+   299→  // Orders
+   300→  checkout: (courseId: string, paymentRef: string, paymentMethod: string) => Order;
+   301→  approveOrder: (orderId: string) => void;
+   302→  rejectOrder: (orderId: string) => void;
+   303→  refundOrder: (orderId: string) => void;
+   304→  addOrderNote: (orderId: string, text: string) => void;
+   305→
+   306→  // Enrollment & progress
+   307→  isEnrolled: (courseId: string) => boolean;
+   308→  getEnrollment: (courseId: string) => Enrollment | undefined;
+   309→  markLessonComplete: (courseId: string, lessonId: string) => void;
+   310→  setLessonPosition: (courseId: string, lessonId: string, position: number) => void;
+   311→  setLastViewed: (courseId: string, lessonId: string) => void;
+   312→  recomputeProgress: (courseId: string) => void;
+   313→
+   314→  // Notes
+   315→  addNote: (lessonId: string, courseId: string, content: string, timestamp: number) => void;
+   316→  updateNote: (noteId: string, content: string) => void;
+   317→  deleteNote: (noteId: string) => void;
+   318→
+   319→  // Bookmarks
+   320→  toggleBookmark: (lessonId: string, courseId: string, timestamp: number) => void;
+   321→  isBookmarked: (lessonId: string) => boolean;
+   322→
+   323→  // Certificates
+   324→  issueCertificate: (courseId: string) => Certificate | undefined;
+   325→
+   326→  // Notifications
+   327→  markNotificationRead: (id: string) => void;
+   328→  markAllNotificationsRead: () => void;
+   329→  addNotification: (n: Omit<Notification, "id" | "createdAt" | "read">) => void;
+   330→  broadcastNotification: (n: Omit<Notification, "id" | "createdAt" | "read" | "userId">) => void;
+   331→
+   332→  // Activities
+   333→  addActivity: (action: string, detail: string) => void;
+   334→}
+   335→
+   336→// ---------------------------------------------------------------------------
+   337→// STORE
+   338→// ---------------------------------------------------------------------------
+   339→export const useLms = create<LmsState>()(
+   340→  persist(
+   341→    (set, get) => ({
+   342→      // --- Nav ---
+   343→      view: "home",
+   344→      courseSlug: null,
+   345→      lessonId: null,
+   346→      blogSlug: null,
+   347→      certificateId: null,
+   348→      adminTab: "overview",
+   349→      checkoutCourseId: null,
+   350→      searchQuery: "",
+   351→      mobileMenuOpen: false,
+   352→
+   353→      // --- Auth ---
+   354→      user: null,
+   355→      authOpen: false,
+   356→      authMode: "login",
+   357→
+   358→      // --- Cart ---
+   359→      items: [],
+   360→      appliedCouponCode: null,
+   361→
+   362→      // --- Data (seeded) ---
+   363→      orders: seedOrders(),
+   364→      enrollments: seedEnrollments(),
+   365→      notes: [],
+   366→      bookmarks: [],
+   367→      certificates: seedCertificates(),
+   368→      notifications: seedNotifications(),
+   369→      announcements: seedAnnouncements(),
+   370→      activities: seedActivities(),
+   371→      couponList: seedCoupons,
+   372→
+   373→      // ---------------- Navigation ----------------
+   374→      navigate: (view, params) => {
+   375→        set({ view, mobileMenuOpen: false, ...params });
+   376→        get().scrollTop();
+   377→      },
+   378→      openCourse: (slug) => {
+   379→        set({ view: "course", courseSlug: slug, mobileMenuOpen: false });
+   380→        get().scrollTop();
+   381→      },
+   382→      openLesson: (courseSlug, lessonId) => {
+   383→        set({ view: "learn", courseSlug, lessonId, mobileMenuOpen: false });
+   384→        get().scrollTop();
+   385→      },
+   386→      openBlog: (slug) => {
+   387→        set({ view: "blog-post", blogSlug: slug, mobileMenuOpen: false });
+   388→        get().scrollTop();
+   389→      },
+   390→      openCertificate: (verifyId) => {
+   391→        set({ view: "certificate", certificateId: verifyId, mobileMenuOpen: false });
+   392→        get().scrollTop();
+   393→      },
+   394→      openCheckout: (courseId) => {
+   395→        set({ view: "checkout", checkoutCourseId: courseId, appliedCouponCode: null, mobileMenuOpen: false });
+   396→        get().scrollTop();
+   397→      },
+   398→      setAdminTab: (tab) => {
+   399→        set({ adminTab: tab });
+   400→        get().scrollTop();
+   401→      },
+   402→      setSearchQuery: (q) => set({ searchQuery: q }),
+   403→      setMobileMenuOpen: (open) => set({ mobileMenuOpen: open }),
+   404→      scrollTop: () => {
+   405→        if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
+   406→      },
+   407→
+   408→      // ---------------- Auth ----------------
+   409→      setAuthOpen: (open, mode = "login") => set({ authOpen: open, authMode: mode }),
+   410→      login: (email, _password) => {
+   411→        if (!email || !email.includes("@")) return { ok: false, message: "Enter a valid email." };
+   412→        const isAdmin = email.toLowerCase() === "admin@learniverse.io";
+   413→        const user: User = isAdmin
+   414→          ? DEMO_ADMIN
+   415→          : { ...DEMO_USER, email, name: email.split("@")[0].replace(/[^a-zA-Z]/g, " ").trim() || "Student" };
+   416→        set({ user, authOpen: false });
+   417→        get().addActivity("LOGIN", `${user.name} signed in`);
+   418→        return { ok: true, message: "Logged in" };
+   419→      },
+   420→      signup: (name, email, _password) => {
+   421→        if (!name || !email.includes("@")) return { ok: false, message: "Please fill all fields correctly." };
+   422→        const user: User = {
+   423→          id: `user-${Date.now()}`,
+   424→          email,
+   425→          name,
+   426→          avatar: `https://i.pravatar.cc/120?u=${encodeURIComponent(email)}`,
+   427→          role: "STUDENT",
+   428→          provider: "email",
+   429→          emailVerified: true,
+   430→        };
+   431→        set({ user, authOpen: false });
+   432→        get().addNotification({
+   433→          type: "SUCCESS",
+   434→          title: "Welcome to Learniverse 🎉",
+   435→          body: `Hi ${name}, your account is ready. Start exploring courses!`,
+   436→        });
+   437→        get().addActivity("SIGNUP", `${name} created an account`);
+   438→        return { ok: true, message: "Account created" };
+   439→      },
+   440→      loginWithGoogle: () => {
+   441→        const user: User = { ...DEMO_USER, provider: "google" };
+   442→        set({ user, authOpen: false });
+   443→        get().addActivity("LOGIN", `${user.name} signed in with Google`);
+   444→      },
+   445→      logout: () => {
+   446→        get().addActivity("LOGOUT", "User signed out");
+   447→        set({ user: null, view: "home" });
+   448→        get().scrollTop();
+   449→      },
+   450→      enterAdminDemo: () => {
+   451→        set({ user: DEMO_ADMIN, view: "admin", adminTab: "overview", authOpen: false });
+   452→        get().addActivity("LOGIN", "Admin signed in (demo)");
+   453→        get().scrollTop();
+   454→      },
+   455→      enterStudentDemo: () => {
+   456→        set({ user: DEMO_USER, view: "my-learning", authOpen: false });
+   457→        get().addActivity("LOGIN", "Demo student signed in");
+   458→        get().scrollTop();
+   459→      },
+   460→      resetPassword: (email) => {
+   461→        if (!email.includes("@")) return { ok: false, message: "Enter a valid email." };
+   462→        set({ authOpen: false });
+   463→        return { ok: true, message: "Reset link sent (demo)." };
+   464→      },
+   465→
+   466→      // ---------------- Cart ----------------
+   467→      addToCart: (courseId) =>
+   468→        set((s) =>
+   469→          s.items.some((i) => i.courseId === courseId)
+   470→            ? s
+   471→            : { items: [...s.items, { courseId, addedAt: new Date().toISOString() }] }
+   472→        ),
+   473→      removeFromCart: (courseId) =>
+   474→        set((s) => ({ items: s.items.filter((i) => i.courseId !== courseId) })),
+   475→      clearCart: () => set({ items: [], appliedCouponCode: null }),
+   476→      isInCart: (courseId) => get().items.some((i) => i.courseId === courseId),
+   477→
+   478→      // ---------------- Coupons ----------------
+   479→      validateCoupon: (code, amount, courseId) => {
+   480→        const c = couponMap[code.toUpperCase()] || get().couponList.find((x) => x.code === code.toUpperCase());
+   481→        if (!c) return { ok: false, message: "Invalid coupon code.", discount: 0 };
+   482→        if (!c.active) return { ok: false, message: "This coupon is no longer active.", discount: 0 };
+   483→        const now = Date.now();
+   484→        if (new Date(c.startsAt).getTime() > now)
+   485→          return { ok: false, message: "This coupon is not yet active.", discount: 0 };
+   486→        if (c.expiresAt && new Date(c.expiresAt).getTime() < now)
+   487→          return { ok: false, message: "This coupon has expired.", discount: 0 };
+   488→        if (c.usageLimit && c.usedCount >= c.usageLimit)
+   489→          return { ok: false, message: "This coupon has reached its usage limit.", discount: 0 };
+   490→        if (amount < c.minAmount)
+   491→          return {
+   492→            ok: false,
+   493→            message: `Minimum order amount of ₹${c.minAmount.toLocaleString("en-IN")} required.`,
+   494→            discount: 0,
+   495→          };
+   496→        if (c.courseId && courseId && c.courseId !== courseId)
+   497→          return { ok: false, message: "This coupon is not valid for this course.", discount: 0 };
+   498→        const discount = c.type === "PERCENT" ? Math.round((amount * c.value) / 100) : Math.min(c.value, amount);
+   499→        if (discount <= 0) return { ok: false, message: "Coupon discount is zero.", discount: 0 };
+   500→        return { ok: true, message: `Coupon applied! You saved ₹${discount.toLocaleString("en-IN")}.`, discount, couponCode: c.code };
+   501→      },
+   502→      applyCoupon: (code, amount, courseId) => {
+   503→        const res = get().validateCoupon(code, amount, courseId);
+   504→        if (res.ok) set({ appliedCouponCode: res.couponCode! });
+   505→        return res;
+   506→      },
+   507→      removeCoupon: () => set({ appliedCouponCode: null }),
+   508→      toggleCouponActive: (id) =>
+   509→        set((s) => ({
+   510→          couponList: s.couponList.map((c) => (c.id === id ? { ...c, active: !c.active } : c)),
+   511→        })),
+   512→      addCoupon: (c) =>
+   513→        set((s) => ({
+   514→          couponList: [...s.couponList, { ...c, id: `cp-${Date.now()}`, usedCount: 0 }],
+   515→        })),
+   516→      deleteCoupon: (id) =>
+   517→        set((s) => ({ couponList: s.couponList.filter((c) => c.id !== id) })),
+   518→
+   519→      // ---------------- Orders ----------------
+   520→      checkout: (courseId, paymentRef, paymentMethod) => {
+   521→        const course = courseMap[courseId];
+   522→        const user = get().user || DEMO_USER;
+   523→        const appliedCode = get().appliedCouponCode;
+   524→        const res = appliedCode ? get().validateCoupon(appliedCode, course.price, courseId) : null;
+   525→        const discount = res?.ok ? res.discount : 0;
+   526→        const finalAmount = course.price - discount;
+   527→        const created = new Date().toISOString();
+   528→        const order: Order = {
+   529→          id: `ord-${Date.now()}`,
+   530→          orderNumber: generateOrderNumber(),
+   531→          userId: user.id,
+   532→          userEmail: user.email,
+   533→          userName: user.name,
+   534→          courseId,
+   535→          courseTitle: course.title,
+   536→          courseThumbnail: course.thumbnail,
+   537→          amount: course.price,
+   538→          discount,
+   539→          finalAmount,
+   540→          currency: course.currency,
+   541→          status: "PENDING",
+   542→          couponCode: appliedCode,
+   543→          paymentRef,
+   544→          paymentMethod,
+   545→          notes: [],
+   546→          timeline: [{ id: "t1", label: "Order created — pending verification", at: created, status: "PENDING" }],
+   547→          createdAt: created,
+   548→        };
+   549→        set((s) => ({
+   550→          orders: [order, ...s.orders],
+   551→          appliedCouponCode: null,
+   552→          items: s.items.filter((i) => i.courseId !== courseId),
+   553→          notifications: [
+   554→            {
+   555→              id: `n-${Date.now()}`,
+   556→              type: "ORDER",
+   557→              title: "Order submitted for verification",
+   558→              body: `Your order for "${course.title}" is pending verification. We'll notify you once approved.`,
+   559→              link: courseId,
+   560→              read: false,
+   561→              createdAt: created,
+   562→            },
+   563→            ...s.notifications,
+   564→          ],
+   565→        }));
+   566→        if (appliedCode) {
+   567→          set((s) => ({
+   568→            couponList: s.couponList.map((c) =>
+   569→              c.code === appliedCode ? { ...c, usedCount: c.usedCount + 1 } : c
+   570→            ),
+   571→          }));
+   572→        }
+   573→        get().addActivity("ORDER_CREATED", `${user.name} created order for ${course.title}`);
+   574→        return order;
+   575→      },
+   576→      approveOrder: (orderId) => {
+   577→        const at = new Date().toISOString();
+   578→        set((s) => {
+   579→          const order = s.orders.find((o) => o.id === orderId);
+   580→          if (!order) return s;
+   581→          const course = courseMap[order.courseId];
+   582→          // create enrollment if not exists for this user+course
+   583→          const already = s.enrollments.some(
+   584→            (e) => e.userId === order.userId && e.courseId === order.courseId
+   585→          );
+   586→          const enrollments = already
+   587→            ? s.enrollments
+   588→            : [
+   589→                {
+   590→                  id: `enr-${Date.now()}`,
+   591→                  userId: order.userId,
+   592→                  courseId: order.courseId,
+   593→                  progress: 0,
+   594→                  completed: false,
+   595→                  enrolledAt: at,
+   596→                },
+   597→                ...s.enrollments,
+   598→              ];
+   599→          return {
+   600→            orders: s.orders.map((o) =>
+   601→              o.id === orderId
+   602→                ? {
+   603→                    ...o,
+   604→                    status: "APPROVED",
+   605→                    approvedAt: at,
+   606→                    timeline: [...o.timeline, { id: `t${Date.now()}`, label: "Order approved — access granted", at, status: "APPROVED" }],
+   607→                  }
+   608→                : o
+   609→            ),
+   610→            enrollments,
+   611→            notifications: [
+   612→              {
+   613→                id: `n-${Date.now()}`,
+   614→                userId: order.userId,
+   615→                type: "SUCCESS",
+   616→                title: "🎉 Access granted!",
+   617→                body: `Your enrollment in "${course.title}" is now active. Start learning!`,
+   618→                link: order.courseId,
+   619→                read: false,
+   620→                createdAt: at,
+   621→              },
+   622→              ...s.notifications,
+   623→            ],
+   624→          };
+   625→        });
+   626→        get().addActivity("ORDER_APPROVED", `Approved order ${get().orders.find((o) => o.id === orderId)?.orderNumber}`);
+   627→      },
+   628→      rejectOrder: (orderId) => {
+   629→        const at = new Date().toISOString();
+   630→        set((s) => ({
+   631→          orders: s.orders.map((o) =>
+   632→            o.id === orderId
+   633→              ? {
+   634→                  ...o,
+   635→                  status: "REJECTED",
+   636→                  rejectedAt: at,
+   637→                  timeline: [...o.timeline, { id: `t${Date.now()}`, label: "Order rejected", at, status: "REJECTED" }],
+   638→                }
+   639→              : o
+   640→          ),
+   641→          notifications: [
+   642→            {
+   643→              id: `n-${Date.now()}`,
+   644→              userId: s.orders.find((o) => o.id === orderId)?.userId,
+   645→              type: "WARNING",
+   646→              title: "Order could not be verified",
+   647→              body: "We couldn't verify your payment. Please check your reference and try again, or contact support.",
+   648→              read: false,
+   649→              createdAt: at,
+   650→            },
+   651→            ...s.notifications,
+   652→          ],
+   653→        }));
+   654→        get().addActivity("ORDER_REJECTED", `Rejected order ${orderId}`);
+   655→      },
+   656→      refundOrder: (orderId) => {
+   657→        const at = new Date().toISOString();
+   658→        set((s) => ({
+   659→          orders: s.orders.map((o) =>
+   660→            o.id === orderId
+   661→              ? {
+   662→                  ...o,
+   663→                  status: "REFUNDED",
+   664→                  refundedAt: at,
+   665→                  timeline: [...o.timeline, { id: `t${Date.now()}`, label: "Order refunded", at, status: "REFUNDED" }],
+   666→                }
+   667→              : o
+   668→          ),
+   669→        }));
+   670→        get().addActivity("ORDER_REFUNDED", `Refunded order ${orderId}`);
+   671→      },
+   672→      addOrderNote: (orderId, text) => {
+   673→        const user = get().user;
+   674→        set((s) => ({
+   675→          orders: s.orders.map((o) =>
+   676→            o.id === orderId
+   677→              ? {
+   678→                  ...o,
+   679→                  notes: [
+   680→                    ...o.notes,
+   681→                    { id: `note-${Date.now()}`, author: user?.name || "Admin", text, at: new Date().toISOString() },
+   682→                  ],
+   683→                }
+   684→              : o
+   685→          ),
+   686→        }));
+   687→      },
+   688→
+   689→      // ---------------- Enrollment & Progress ----------------
+   690→      isEnrolled: (courseId) => {
+   691→        const user = get().user;
+   692→        if (!user) return false;
+   693→        return get().enrollments.some((e) => e.userId === user.id && e.courseId === courseId);
+   694→      },
+   695→      getEnrollment: (courseId) => {
+   696→        const user = get().user;
+   697→        if (!user) return undefined;
+   698→        return get().enrollments.find((e) => e.userId === user.id && e.courseId === courseId);
+   699→      },
+   700→      markLessonComplete: (courseId, lessonId) => {
+   701→        const user = get().user;
+   702→        if (!user) return;
+   703→        set((s) => {
+   704→          const enrollments = s.enrollments.map((e) => {
+   705→            if (e.userId !== user.id || e.courseId !== courseId) return e;
+   706→            const course = courseMap[courseId];
+   707→            const completedKey = `progress-${user.id}-${courseId}`;
+   708→            const existing: string[] = JSON.parse(
+   709→              (typeof window !== "undefined" && localStorage.getItem(completedKey)) || "[]"
+   710→            );
+   711→            if (!existing.includes(lessonId)) existing.push(lessonId);
+   712→            if (typeof window !== "undefined")
+   713→              localStorage.setItem(completedKey, JSON.stringify(existing));
+   714→            const total = course.sections.reduce((n, sec) => n + sec.lessons.length, 0);
+   715→            const pct = total ? Math.round((existing.length / total) * 100) : 0;
+   716→            return { ...e, progress: pct, completed: pct >= 100, lastViewedLessonId: lessonId, lastViewedAt: new Date().toISOString() };
+   717→          });
+   718→          return { enrollments };
+   719→        });
+   720→        get().recomputeProgress(courseId);
+   721→        // auto-issue certificate
+   722→        const e = get().getEnrollment(courseId);
+   723→        if (e?.completed) get().issueCertificate(courseId);
+   724→      },
+   725→      setLessonPosition: (courseId, _lessonId, _position) => {
+   726→        // positions are stored in localStorage per lesson; no-op on store
+   727→      },
+   728→      setLastViewed: (courseId, lessonId) => {
+   729→        const user = get().user;
+   730→        if (!user) return;
+   731→        set((s) => ({
+   732→          enrollments: s.enrollments.map((e) =>
+   733→            e.userId === user.id && e.courseId === courseId
+   734→              ? { ...e, lastViewedLessonId: lessonId, lastViewedAt: new Date().toISOString() }
+   735→              : e
+   736→          ),
+   737→        }));
+   738→      },
+   739→      recomputeProgress: (courseId) => {
+   740→        const user = get().user;
+   741→        if (!user) return;
+   742→        const course = courseMap[courseId];
+   743→        const completedKey = `progress-${user.id}-${courseId}`;
+   744→        const existing: string[] = JSON.parse(
+   745→          (typeof window !== "undefined" && localStorage.getItem(completedKey)) || "[]"
+   746→        );
+   747→        const total = course.sections.reduce((n, sec) => n + sec.lessons.length, 0);
+   748→        const pct = total ? Math.round((existing.length / total) * 100) : 0;
+   749→        set((s) => ({
+   750→          enrollments: s.enrollments.map((e) =>
+   751→            e.userId === user.id && e.courseId === courseId
+   752→              ? { ...e, progress: pct, completed: pct >= 100 }
+   753→              : e
+   754→          ),
+   755→        }));
+   756→      },
+   757→
+   758→      // ---------------- Notes ----------------
+   759→      addNote: (lessonId, courseId, content, timestamp) => {
+   760→        const user = get().user;
+   761→        const at = new Date().toISOString();
+   762→        set((s) => ({
+   763→          notes: [
+   764→            { id: `note-${Date.now()}`, lessonId, courseId, content, timestamp, createdAt: at, updatedAt: at },
+   765→            ...s.notes,
+   766→          ],
+   767→        }));
+   768→        void user;
+   769→      },
+   770→      updateNote: (noteId, content) =>
+   771→        set((s) => ({
+   772→          notes: s.notes.map((n) =>
+   773→            n.id === noteId ? { ...n, content, updatedAt: new Date().toISOString() } : n
+   774→          ),
+   775→        })),
+   776→      deleteNote: (noteId) =>
+   777→        set((s) => ({ notes: s.notes.filter((n) => n.id !== noteId) })),
+   778→
+   779→      // ---------------- Bookmarks ----------------
+   780→      toggleBookmark: (lessonId, courseId, timestamp) =>
+   781→        set((s) => {
+   782→          const exists = s.bookmarks.some((b) => b.lessonId === lessonId);
+   783→          return {
+   784→            bookmarks: exists
+   785→              ? s.bookmarks.filter((b) => b.lessonId !== lessonId)
+   786→              : [...s.bookmarks, { id: `bm-${Date.now()}`, lessonId, courseId, timestamp, createdAt: new Date().toISOString() }],
+   787→          };
+   788→        }),
+   789→      isBookmarked: (lessonId) => get().bookmarks.some((b) => b.lessonId === lessonId),
+   790→
+   791→      // ---------------- Certificates ----------------
+   792→      issueCertificate: (courseId) => {
+   793→        const user = get().user;
+   794→        if (!user) return undefined;
+   795→        const course = courseMap[courseId];
+   796→        const exists = get().certificates.some((c) => c.userId === user.id && c.courseId === courseId);
+   797→        if (exists) return get().certificates.find((c) => c.userId === user.id && c.courseId === courseId);
+   798→        const cert: Certificate = {
+   799→          id: `cert-${Date.now()}`,
+   800→          verifyId: generateVerifyId(),
+   801→          userId: user.id,
+   802→          courseId,
+   803→          candidateName: user.name,
+   804→          courseTitle: course.title,
+   805→          instructorName: "Rohan Kapoor",
+   806→          score: 95 + Math.floor(Math.random() * 5),
+   807→          issuedAt: new Date().toISOString(),
+   808→        };
+   809→        set((s) => ({
+   810→          certificates: [cert, ...s.certificates],
+   811→          notifications: [
+   812→            {
+   813→              id: `n-${Date.now()}`,
+   814→              userId: user.id,
+   815→              type: "SUCCESS",
+   816→              title: "🎓 Certificate earned!",
+   817→              body: `Congratulations! You completed "${course.title}". Your certificate is ready.`,
+   818→              link: cert.verifyId,
+   819→              read: false,
+   820→              createdAt: new Date().toISOString(),
+   821→            },
+   822→            ...s.notifications,
+   823→          ],
+   824→        }));
+   825→        get().addActivity("CERTIFICATE_ISSUED", `${user.name} earned certificate for ${course.title}`);
+   826→        return cert;
+   827→      },
+   828→
+   829→      // ---------------- Notifications ----------------
+   830→      markNotificationRead: (id) =>
+   831→        set((s) => ({
+   832→          notifications: s.notifications.map((n) => (n.id === id ? { ...n, read: true } : n)),
+   833→        })),
+   834→      markAllNotificationsRead: () =>
+   835→        set((s) => ({ notifications: s.notifications.map((n) => ({ ...n, read: true })) })),
+   836→      addNotification: (n) =>
+   837→        set((s) => ({
+   838→          notifications: [
+   839→            { ...n, id: `n-${Date.now()}`, createdAt: new Date().toISOString(), read: false },
+   840→            ...s.notifications,
+   841→          ],
+   842→        })),
+   843→      broadcastNotification: (n) => {
+   844→        set((s) => ({
+   845→          notifications: [
+   846→            { ...n, id: `n-${Date.now()}`, createdAt: new Date().toISOString(), read: false },
+   847→            ...s.notifications,
+   848→          ],
+   849→        }));
+   850→        get().addActivity("NOTIFICATION_BROADCAST", `Broadcast: ${n.title}`);
+   851→      },
+   852→
+   853→      // ---------------- Activities ----------------
+   854→      addActivity: (action, detail) =>
+   855→        set((s) => ({
+   856→          activities: [
+   857→            {
+   858→              id: `a-${Date.now()}`,
+   859→              userName: get().user?.name,
+   860→              action,
+   861→              detail,
+   862→              ip: "103.21.x.x",
+   863→              createdAt: new Date().toISOString(),
+   864→            },
+   865→            ...s.activities,
+   866→          ].slice(0, 200),
+   867→        })),
+   868→    }),
+   869→    {
+   870→      name: "learniverse-lms",
+   871→      storage: createJSONStorage(() => localStorage),
+   872→      // Don't persist the seed catalog of orders/notifications/etc.? We DO want
+   873→      // orders to persist so the demo state survives reloads. Keep everything.
+   874→      partialize: (s) => ({
+   875→        user: s.user,
+   876→        orders: s.orders,
+   877→        enrollments: s.enrollments,
+   878→        notes: s.notes,
+   879→        bookmarks: s.bookmarks,
+   880→        certificates: s.certificates,
+   881→        notifications: s.notifications,
+   882→        announcements: s.announcements,
+   883→        activities: s.activities,
+   884→        couponList: s.couponList,
+   885→        items: s.items,
+   886→        appliedCouponCode: s.appliedCouponCode,
+   887→      }),
+   888→    }
+   889→  )
+   890→);
+   891→
+   892→// Selector helpers (re-exported for convenience)
+   893→export { timeAgo };
+   894→
