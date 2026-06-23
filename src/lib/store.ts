@@ -239,6 +239,8 @@ interface NavState {
   certificateId: string | null;
   adminTab: AdminTab;
   checkoutCourseId: string | null;
+  myCourseId: string | null;
+  pendingRedirect: string | null; // view to redirect to after login
   searchQuery: string;
   mobileMenuOpen: boolean;
 }
@@ -278,6 +280,7 @@ interface LmsState extends NavState, AuthState, CartState {
   openBlog: (slug: string) => void;
   openCertificate: (verifyId: string) => void;
   openCheckout: (courseId: string) => void;
+  openMyCourse: (courseId: string) => void;
   setAdminTab: (tab: AdminTab) => void;
   setSearchQuery: (q: string) => void;
   setMobileMenuOpen: (open: boolean) => void;
@@ -373,6 +376,8 @@ export const useLms = create<LmsState>()(
       certificateId: null,
       adminTab: "overview",
       checkoutCourseId: null,
+      myCourseId: null,
+      pendingRedirect: null,
       searchQuery: "",
       mobileMenuOpen: false,
 
@@ -437,6 +442,10 @@ export const useLms = create<LmsState>()(
         set({ view: "checkout", checkoutCourseId: courseId, appliedCouponCode: null, mobileMenuOpen: false });
         get().scrollTop();
       },
+      openMyCourse: (courseId) => {
+        set({ view: "my-course", myCourseId: courseId, mobileMenuOpen: false });
+        get().scrollTop();
+      },
       setAdminTab: (tab) => {
         set({ adminTab: tab });
         get().scrollTop();
@@ -468,6 +477,12 @@ export const useLms = create<LmsState>()(
             authOpen: false,
           });
           get().addActivity("LOGIN", `${res.user.name} signed in`);
+          // Redirect back to pending view (e.g., checkout) if set
+          const pending = get().pendingRedirect;
+          if (pending) {
+            set({ view: pending as ViewName, pendingRedirect: null });
+            get().scrollTop();
+          }
         }
         return { ok: res.ok, message: res.message };
       },
@@ -496,6 +511,12 @@ export const useLms = create<LmsState>()(
             body: `Hi ${name}, your account is ready. Start exploring courses!`,
           });
           get().addActivity("SIGNUP", `${name} created an account`);
+          // Redirect back to pending view (e.g., checkout) if set
+          const pending = get().pendingRedirect;
+          if (pending) {
+            set({ view: pending as ViewName, pendingRedirect: null });
+            get().scrollTop();
+          }
         }
         return { ok: res.ok, message: res.message };
       },
@@ -517,6 +538,12 @@ export const useLms = create<LmsState>()(
             authOpen: false,
           });
           get().addActivity("LOGIN", `${res.user.name} signed in with Google`);
+          // Redirect back to pending view (e.g., checkout) if set
+          const pending = get().pendingRedirect;
+          if (pending) {
+            set({ view: pending as ViewName, pendingRedirect: null });
+            get().scrollTop();
+          }
         } else if (!res.ok) {
           // surface error via a notification so the user sees why
           get().addNotification({

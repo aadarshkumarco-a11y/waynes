@@ -13,6 +13,7 @@ import {
   updateProfile,
   type User as FirebaseUser,
 } from "firebase/auth";
+import { getFirestore, type Firestore } from "firebase/firestore";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCMVXmsPZh_l3RgToFepzgodmnGpZAe-1A",
@@ -33,6 +34,7 @@ if (getApps().length === 0) {
 }
 
 export const auth = getAuth(app);
+export const db: Firestore = getFirestore(app);
 export const googleProvider = new GoogleAuthProvider();
 
 // ---------------------------------------------------------------------------

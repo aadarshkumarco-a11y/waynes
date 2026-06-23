@@ -12,8 +12,10 @@ import {
   LayoutDashboard,
   Award,
   LogOut,
+  LogIn,
   Shield,
   ChevronRight,
+  Package,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -189,16 +191,12 @@ export function Navbar() {
                   <DropdownMenuItem onClick={() => navigate("my-learning")}>
                     <BookOpen className="size-4" /> My Learning
                   </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate("my-orders")}>
+                    <Package className="size-4" /> My Orders
+                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => navigate("dashboard")}>
                     <LayoutDashboard className="size-4" /> Dashboard
                   </DropdownMenuItem>
-                  {isAdmin && (
-                    <DropdownMenuItem
-                      onClick={() => window.open("/admin.html", "_blank")}
-                    >
-                      <Shield className="size-4" /> Admin Panel
-                    </DropdownMenuItem>
-                  )}
                   <DropdownMenuItem onClick={() => navigate("certificate")}>
                     <Award className="size-4" /> Certificates
                   </DropdownMenuItem>
@@ -214,11 +212,10 @@ export function Navbar() {
             ) : (
               <Button
                 size="sm"
-                variant="outline"
-                className="ml-1 gap-1.5 rounded-md border-primary/50 font-mono text-xs uppercase tracking-wider text-primary hover:bg-primary/10 hover:text-primary"
+                className="ml-1 gap-1.5 rounded-md gradient-brand font-mono text-xs font-bold uppercase tracking-wider text-white shadow-glow hover:opacity-90"
                 onClick={() => setAuthOpen(true, "login")}
               >
-                <Terminal className="size-3.5" /> Sign in
+                <LogIn className="size-3.5" /> Login
               </Button>
             )}
 

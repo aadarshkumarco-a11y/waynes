@@ -343,27 +343,14 @@ export function AuthModal() {
                 <p className="mb-2 text-center font-mono text-[11px] font-semibold uppercase tracking-wider text-primary/80">
                   {"> "}Quick Access
                 </p>
-                <div className="grid grid-cols-2 gap-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={enterStudentDemo}
-                    className="gap-1.5 rounded-none border-primary/40 font-mono text-xs uppercase tracking-wider text-primary hover:bg-primary/10 hover:text-primary"
-                  >
-                    <UserIcon className="size-3.5" /> Student
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => {
-                      setAuthOpen(false);
-                      window.open("/admin.html", "_blank");
-                    }}
-                    className="gap-1.5 rounded-none border-primary/40 font-mono text-xs uppercase tracking-wider text-primary hover:bg-primary/10 hover:text-primary"
-                  >
-                    <Shield className="size-3.5" /> Admin
-                  </Button>
-                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={enterStudentDemo}
+                  className="w-full gap-1.5 rounded-none border-primary/40 font-mono text-xs uppercase tracking-wider text-primary hover:bg-primary/10 hover:text-primary"
+                >
+                  <UserIcon className="size-3.5" /> Explore as Student
+                </Button>
               </div>
             </>
           )}

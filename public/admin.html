@@ -203,6 +203,31 @@
 
 <div class="toasts" id="toasts"></div>
 
+<!-- Firebase SDK (modular, ESM) for cross-device Firestore sync -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+  import { getFirestore, doc, setDoc, deleteDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyCMVXmsPZh_l3RgToFepzgodmnGpZAe-1A",
+    authDomain: "courses-295cc.firebaseapp.com",
+    projectId: "courses-295cc",
+    storageBucket: "courses-295cc.firebasestorage.app",
+    messagingSenderId: "364880624693",
+    appId: "1:364880624693:web:344b55fc25ce42addf057c",
+    measurementId: "G-SJG6R3H9JY"
+  };
+  const app = initializeApp(firebaseConfig);
+  const fsdb = getFirestore(app);
+  window._fsdb = fsdb;
+  window._fsSetDoc = setDoc;
+  window._fsDeleteDoc = deleteDoc;
+  window._fsDoc = doc;
+  window._fsCollection = collection;
+  window._fsGetDocs = getDocs;
+  console.log("[admin] Firestore ready");
+</script>
+
 <script>
 /* ============================================================
    Waynes Admin — standalone control panel
@@ -305,6 +330,47 @@ function write(state){
 }
 function update(mutator){
   const s=read();mutator(s);write(s);render();
+}
+
+/* ---------- Firestore sync (cross-device) ---------- */
+// Pushes local state changes to Firestore so the main web app
+// (which has real-time listeners) picks them up instantly.
+function fsSyncCourses(){
+  if(!window._fsdb||!window._fsSetDoc||!window._fsDoc)return;
+  const s=read();
+  (s.customCourses||[]).forEach(c=>{
+    window._fsSetDoc(window._fsDoc(window._fsdb,"courses",c.id), c)
+      .catch(e=>console.warn("[fs] course sync fail:",c.id,e.message));
+  });
+}
+function fsSyncPayment(){
+  if(!window._fsdb||!window._fsSetDoc||!window._fsDoc)return;
+  const s=read();
+  window._fsSetDoc(window._fsDoc(window._fsdb,"config","paymentSettings"), s.paymentSettings||{})
+    .catch(e=>console.warn("[fs] payment sync fail:",e.message));
+}
+function fsDeleteCourse(id){
+  if(!window._fsdb||!window._fsDeleteDoc||!window._fsDoc)return;
+  window._fsDeleteDoc(window._fsDoc(window._fsdb,"courses",id))
+    .catch(e=>console.warn("[fs] course delete fail:",id,e.message));
+}
+// On load, pull courses from Firestore and merge into local state
+async function fsPullCourses(){
+  if(!window._fsdb||!window._fsCollection||!window._fsGetDocs)return;
+  try{
+    const snap=await window._fsGetDocs(window._fsCollection(window._fsdb,"courses"));
+    if(snap.empty)return;
+    const fsCourses=[];
+    snap.forEach(d=>{const data=d.data();if(data&&data.id)fsCourses.push({...data,id:d.id})});
+    if(fsCourses.length===0)return;
+    update(s=>{
+      // Merge: Firestore courses + local-only custom courses
+      const fsIds=new Set(fsCourses.map(c=>c.id));
+      const localOnly=(s.customCourses||[]).filter(c=>!fsIds.has(c.id));
+      s.customCourses=[...fsCourses,...localOnly];
+    });
+    console.log("[fs] pulled",fsCourses.length,"courses from Firestore");
+  }catch(e){console.warn("[fs] pull courses fail:",e.message)}
 }
 
 /* ---------- toast ---------- */
@@ -696,11 +762,13 @@ function saveCourseForm(id){
   });
   closeModal();
   toast(id?"Course updated — reload store":"Course created — reload store");
+  fsSyncCourses(); // push to Firestore for cross-device sync
 }
 function deleteCustomCourse(id){
   if(!confirm("Delete this custom course? This cannot be undone."))return;
   update(s=>{s.customCourses=s.customCourses.filter(c=>c.id!==id);log(s,"COURSE_DELETED","Deleted course "+id)});
   toast("Course deleted");
+  fsDeleteCourse(id); // remove from Firestore
 }
 
 /* ============================================================
@@ -777,6 +845,7 @@ function savePayment(){
   };
   update(s=>{s.paymentSettings={...s.paymentSettings,...patch};log(s,"PAYMENT_SETTINGS_SAVED","Saved payment settings")});
   toast("Payment settings saved — reload store to see");
+  fsSyncPayment(); // push to Firestore for cross-device sync
 }
 function renderCoupons(s){
   return `
@@ -973,6 +1042,8 @@ function bindHandlers(){}
   await loadCourses();
   $$("#nav button").forEach(b=>b.classList.toggle("active",b.dataset.tab===TAB));
   render();
+  // Pull courses from Firestore (cross-device sync)
+  setTimeout(fsPullCourses, 1500);
   // re-sync if another tab changes localStorage
   window.addEventListener("storage",e=>{if(e.key===KEY)render()});
 })();

@@ -12,6 +12,8 @@ import { CourseDetailView } from "@/components/lms/course-detail-view";
 import { LearnView } from "@/components/lms/learn-view";
 import { CheckoutView } from "@/components/lms/checkout-view";
 import { MyLearningView } from "@/components/lms/my-learning-view";
+import { MyOrdersView } from "@/components/lms/my-orders-view";
+import { MyCourseView } from "@/components/lms/my-course-view";
 import { BlogView } from "@/components/lms/blog-view";
 import { BlogPostView } from "@/components/lms/blog-post-view";
 import { CertificateView } from "@/components/lms/certificate-view";
@@ -42,6 +44,10 @@ function renderView(view: string) {
     case "my-learning":
     case "dashboard":
       return <MyLearningView />;
+    case "my-orders":
+      return <MyOrdersView />;
+    case "my-course":
+      return <MyCourseView />;
     case "blog":
       return <BlogView />;
     case "blog-post":

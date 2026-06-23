@@ -69,6 +69,7 @@ import {
   formatPrice,
 } from "@/lib/format";
 import { useCourseBySlug } from "@/hooks/use-courses";
+import { toast } from "sonner";
 import type { Course, LessonType } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -434,7 +435,10 @@ export function CourseDetailView() {
   // CTA handlers
   const requireAuth = (cb: () => void) => {
     if (!user) {
+      // Set pending redirect so after login the user comes back to checkout
+      useLms.setState({ pendingRedirect: "checkout", checkoutCourseId: course.id });
       setAuthOpen(true, "login");
+      toast.info("Please login to continue your purchase.");
       return;
     }
     cb();

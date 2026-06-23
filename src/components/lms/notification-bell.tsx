@@ -30,7 +30,7 @@ const TYPE_DOT: Record<NotificationType, string> = {
 };
 
 export function NotificationBell() {
-  const { notifications, markNotificationRead, markAllNotificationsRead, openCourse, openCertificate } =
+  const { notifications, markNotificationRead, markAllNotificationsRead, openCourse, openCertificate, openMyCourse, navigate } =
     useLms();
   const unread = notifications.filter((n) => !n.read).length;
   const sorted = [...notifications].sort(
@@ -81,8 +81,16 @@ export function NotificationBell() {
                 key={n.id}
                 onClick={() => {
                   markNotificationRead(n.id);
-                  if (n.link?.startsWith("LMS-")) openCertificate(n.link);
-                  else if (n.link) openCourse(n.link);
+                  // Approval notifications → open my-course (course access page)
+                  if (n.type === "SUCCESS" && n.link) {
+                    openMyCourse(n.link);
+                  } else if (n.link?.startsWith("LMS-")) {
+                    openCertificate(n.link);
+                  } else if (n.link) {
+                    openCourse(n.link);
+                  } else if (n.type === "ANNOUNCEMENT") {
+                    navigate("catalog");
+                  }
                 }}
                 className={cn(
                   "flex gap-3 border-b px-4 py-3 text-left transition-colors hover:bg-accent/60",
