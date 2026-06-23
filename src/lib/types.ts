@@ -30,7 +30,9 @@ export type ViewName =
   | "certificate"
   | "checkout"
   | "pricing"
-  | "admin";
+  | "admin"
+  | "my-orders"
+  | "my-course";
 
 export type AdminTab =
   | "overview"

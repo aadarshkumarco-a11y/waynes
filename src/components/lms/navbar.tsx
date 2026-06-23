@@ -12,8 +12,10 @@ import {
   LayoutDashboard,
   Award,
   LogOut,
+  LogIn,
   Shield,
   ChevronRight,
+  Package,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -188,6 +190,9 @@ export function Navbar() {
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => navigate("my-learning")}>
                     <BookOpen className="size-4" /> My Learning
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate("my-orders")}>
+                    <Package className="size-4" /> My Orders
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => navigate("dashboard")}>
                     <LayoutDashboard className="size-4" /> Dashboard

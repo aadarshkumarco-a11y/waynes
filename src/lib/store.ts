@@ -234,6 +234,7 @@ interface NavState {
   certificateId: string | null;
   adminTab: AdminTab;
   checkoutCourseId: string | null;
+  myCourseId: string | null;
   searchQuery: string;
   mobileMenuOpen: boolean;
 }
@@ -271,6 +272,7 @@ interface LmsState extends NavState, AuthState, CartState {
   openBlog: (slug: string) => void;
   openCertificate: (verifyId: string) => void;
   openCheckout: (courseId: string) => void;
+  openMyCourse: (courseId: string) => void;
   setAdminTab: (tab: AdminTab) => void;
   setSearchQuery: (q: string) => void;
   setMobileMenuOpen: (open: boolean) => void;
@@ -358,6 +360,7 @@ export const useLms = create<LmsState>()(
       certificateId: null,
       adminTab: "overview",
       checkoutCourseId: null,
+      myCourseId: null,
       searchQuery: "",
       mobileMenuOpen: false,
 
@@ -405,6 +408,10 @@ export const useLms = create<LmsState>()(
       },
       openCheckout: (courseId) => {
         set({ view: "checkout", checkoutCourseId: courseId, appliedCouponCode: null, mobileMenuOpen: false });
+        get().scrollTop();
+      },
+      openMyCourse: (courseId) => {
+        set({ view: "my-course", myCourseId: courseId, mobileMenuOpen: false });
         get().scrollTop();
       },
       setAdminTab: (tab) => {
@@ -545,7 +552,10 @@ export const useLms = create<LmsState>()(
 
       // ---------------- Orders ----------------
       checkout: (courseId, paymentRef, paymentMethod) => {
-        const course = courseMap[courseId];
+        const course = courseMap[courseId] || get().customCourses.find((c) => c.id === courseId);
+        if (!course) {
+          throw new Error("Course not found: " + courseId);
+        }
         const user = get().user || DEMO_USER;
         const appliedCode = get().appliedCouponCode;
         const res = appliedCode ? get().validateCoupon(appliedCode, course.price, courseId) : null;
@@ -605,7 +615,11 @@ export const useLms = create<LmsState>()(
         set((s) => {
           const order = s.orders.find((o) => o.id === orderId);
           if (!order) return s;
-          const course = courseMap[order.courseId];
+          // Look up course from catalog OR custom courses (Firestore)
+          const course = courseMap[order.courseId] || s.customCourses.find((c) => c.id === order.courseId);
+          const courseTitle = course?.title || order.courseTitle;
+          const downloadUrl = course?.downloadUrl;
+          const greeting = s.paymentSettings?.greetingMessage || "";
           // create enrollment if not exists for this user+course
           const already = s.enrollments.some(
             (e) => e.userId === order.userId && e.courseId === order.courseId
@@ -623,6 +637,10 @@ export const useLms = create<LmsState>()(
                 },
                 ...s.enrollments,
               ];
+          // Build notification body with greeting + download link
+          const notifBody = downloadUrl
+            ? `${greeting}\n\nYour enrollment in "${courseTitle}" is now active. Download link: ${downloadUrl}`
+            : `${greeting}\n\nYour enrollment in "${courseTitle}" is now active. Start learning!`;
           return {
             orders: s.orders.map((o) =>
               o.id === orderId
@@ -640,8 +658,8 @@ export const useLms = create<LmsState>()(
                 id: `n-${Date.now()}`,
                 userId: order.userId,
                 type: "SUCCESS",
-                title: "🎉 Access granted!",
-                body: `Your enrollment in "${course.title}" is now active. Start learning!`,
+                title: "Course Access Approved",
+                body: notifBody,
                 link: order.courseId,
                 read: false,
                 createdAt: at,

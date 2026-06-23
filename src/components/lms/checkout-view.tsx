@@ -108,9 +108,22 @@ function EmptyCheckoutState() {
 
 export function CheckoutView() {
   const checkoutCourseId = useLms((s) => s.checkoutCourseId);
+  const customCourses = useLms((s) => s.customCourses);
+  const courseOverrides = useLms((s) => s.courseOverrides);
   const course = useMemo(
-    () => (checkoutCourseId ? courseMap[checkoutCourseId] : null),
-    [checkoutCourseId]
+    () => {
+      if (!checkoutCourseId) return null;
+      // 1. Check catalog courses (with overrides)
+      const base = courseMap[checkoutCourseId];
+      if (base) return { ...base, ...(courseOverrides[checkoutCourseId] || {}) };
+      // 2. Check Firestore-synced custom courses
+      const custom = customCourses.find((c) => c.id === checkoutCourseId);
+      if (custom) return custom;
+      // 3. Fallback: check by slug (some flows pass slug as ID)
+      const bySlug = customCourses.find((c) => c.slug === checkoutCourseId);
+      return bySlug || null;
+    },
+    [checkoutCourseId, customCourses, courseOverrides]
   );
 
   if (!course) return <EmptyCheckoutState />;

@@ -175,6 +175,7 @@
       <button data-tab="announcements"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg> Announcements</button>
       <button data-tab="activity"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> Activity Log</button>
       <div class="sec">System</div>
+      <button data-tab="payment"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg> Payment</button>
       <button data-tab="data"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg> Data Tools</button>
     </nav>
     <div style="padding:16px 8px 4px;border-top:1px solid var(--border);margin-top:12px">
@@ -201,6 +202,31 @@
 </div>
 
 <div class="toasts" id="toasts"></div>
+
+<!-- Firebase SDK (modular, ESM) for Firestore sync -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+  import { getFirestore, doc, setDoc, deleteDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyCMVXmsPZh_l3RgToFepzgodmnGpZAe-1A",
+    authDomain: "courses-295cc.firebaseapp.com",
+    projectId: "courses-295cc",
+    storageBucket: "courses-295cc.firebasestorage.app",
+    messagingSenderId: "364880624693",
+    appId: "1:364880624693:web:344b55fc25ce42addf057c",
+    measurementId: "G-SJG6R3H9JY"
+  };
+  const app = initializeApp(firebaseConfig);
+  const fsdb = getFirestore(app);
+  window._fsdb = fsdb;
+  window._fsSetDoc = setDoc;
+  window._fsDeleteDoc = deleteDoc;
+  window._fsDoc = doc;
+  window._fsCollection = collection;
+  window._fsGetDocs = getDocs;
+  console.log("[admin] Firestore ready");
+</script>
 
 <script>
 /* ============================================================
@@ -294,6 +320,47 @@ function update(mutator){
   const s=read();mutator(s);write(s);render();
 }
 
+/* ---------- Firestore sync (cross-device) ---------- */
+function fsSyncCourses(){
+  if(!window._fsdb||!window._fsSetDoc||!window._fsDoc){console.warn("[fs] not ready");return}
+  const s=read();
+  (s.customCourses||[]).forEach(c=>{
+    window._fsSetDoc(window._fsDoc(window._fsdb,"courses",c.id), c)
+      .then(()=>console.log("[fs] course write SUCCESS:",c.id))
+      .catch(e=>console.error("[fs] course write FAIL:",c.id,e.message));
+  });
+}
+function fsSyncPayment(){
+  if(!window._fsdb||!window._fsSetDoc||!window._fsDoc){console.warn("[fs] not ready");return}
+  const s=read();
+  window._fsSetDoc(window._fsDoc(window._fsdb,"config","paymentSettings"), s.paymentSettings||{})
+    .then(()=>console.log("[fs] payment write SUCCESS"))
+    .catch(e=>console.error("[fs] payment write FAIL:",e.message));
+}
+function fsDeleteCourse(id){
+  if(!window._fsdb||!window._fsDeleteDoc||!window._fsDoc){console.warn("[fs] not ready");return}
+  window._fsDeleteDoc(window._fsDoc(window._fsdb,"courses",id))
+    .then(()=>console.log("[fs] course delete SUCCESS:",id))
+    .catch(e=>console.error("[fs] course delete FAIL:",id,e.message));
+}
+async function fsPullCourses(){
+  if(!window._fsdb||!window._fsCollection||!window._fsGetDocs){console.warn("[fs] not ready, retrying...");return setTimeout(fsPullCourses,2000)}
+  try{
+    const snap=await window._fsGetDocs(window._fsCollection(window._fsdb,"courses"));
+    console.log("[fs] courses read SUCCESS:",snap.size,"documents");
+    if(snap.empty){console.log("[fs] no courses in Firestore");return}
+    const fsCourses=[];
+    snap.forEach(d=>{const data=d.data();if(data&&data.id)fsCourses.push({...data,id:d.id})});
+    if(fsCourses.length===0)return;
+    update(s=>{
+      const fsIds=new Set(fsCourses.map(c=>c.id));
+      const localOnly=(s.customCourses||[]).filter(c=>!fsIds.has(c.id));
+      s.customCourses=[...fsCourses,...localOnly];
+    });
+    console.log("[fs] pulled",fsCourses.length,"courses from Firestore");
+  }catch(e){console.error("[fs] pull courses FAIL:",e.message)}
+}
+
 /* ---------- toast ---------- */
 function toast(msg,err){
   const t=document.createElement("div");
@@ -325,12 +392,13 @@ $$("#nav button").forEach(b=>b.addEventListener("click",()=>setTab(b.dataset.tab
 const TITLES={
   dashboard:["Dashboard","Store overview & live metrics"],
   orders:["Orders","Approve, reject & refund orders"],
-  courses:["Courses","Manage pricing, featured & visibility"],
+  courses:["Courses","Add, edit & manage course catalog"],
   coupons:["Coupons","Create & manage discount codes"],
   students:["Students","Learners derived from orders"],
   notifications:["Notifications","Broadcast to learners"],
   announcements:["Announcements","Pinned store-wide messages"],
   activity:["Activity Log","Audit trail of all actions"],
+  payment:["Payment","UPI ID, QR code, bank details & checkout message"],
   data:["Data Tools","Backup, restore & reset"],
 };
 
@@ -352,6 +420,7 @@ function render(){
   if(TAB==="announcements")c.innerHTML=renderAnnouncements(s);
   if(TAB==="activity")c.innerHTML=renderActivity(s);
   if(TAB==="data")c.innerHTML=renderData(s);
+  if(TAB==="payment")c.innerHTML=renderPayment(s);
   bindHandlers();
 }
 
@@ -478,7 +547,12 @@ function actOrder(id,act){
       o.timeline.push({id:uid("t"),label:"Order approved — access granted",at:now,status:"APPROVED"});
       if(!s.enrollments.some(e=>e.userId===o.userId&&e.courseId===o.courseId))
         s.enrollments.push({id:uid("enr"),userId:o.userId,courseId:o.courseId,progress:0,completed:false,enrolledAt:now});
-      s.notifications.unshift({id:uid("n"),userId:o.userId,type:"SUCCESS",title:"🎉 Access granted!",body:`Your enrollment in "${o.courseTitle}" is active.`,read:false,createdAt:now});
+      // Find course (catalog or custom) to get download link
+      const course=CAT[o.courseId]||(s.customCourses||[]).find(c=>c.id===o.courseId);
+      const dl=course?.downloadUrl;
+      const greeting=s.paymentSettings?.greetingMessage||"";
+      const body=dl?`${greeting}\n\nYour enrollment in "${o.courseTitle}" is now active. Download link: ${dl}`:`${greeting}\n\nYour enrollment in "${o.courseTitle}" is now active. Start learning!`;
+      s.notifications.unshift({id:uid("n"),userId:o.userId,type:"SUCCESS",title:"Course Access Approved",body:body,read:false,createdAt:now});
       log(s,"ORDER_APPROVED","Approved "+o.orderNumber);
     }
     if(act==="reject"){
@@ -512,10 +586,38 @@ async function loadCourses(){
 function renderCourses(s){
   const ov=s.courseOverrides||{};
   const list=courseList||CATARR;
+  const customs=s.customCourses||[];
   return `
-  <div class="card mb16" style="background:rgba(16,185,129,.06);border-color:rgba(16,185,129,.2)">
-    <div class="row" style="gap:10px"><span style="font-size:18px">💡</span><div><strong>Course content</strong> is defined in code. Here you control <strong>pricing, discounts, featured & visibility</strong> — changes apply live to the store (reload the store tab to see them).</div></div>
+  <div class="row between mb16">
+    <div class="card mb0" style="background:rgba(16,185,129,.06);border-color:rgba(16,185,129,.2);flex:1;margin-right:12px">
+      <div class="row" style="gap:10px"><span style="font-size:18px">💡</span><div>Add custom courses below — they sync to Firestore and appear on the website instantly for ALL users, devices, and browsers.</div></div>
+    </div>
+    <button class="btn primary" onclick="openCourseForm()">+ Add New Course</button>
   </div>
+
+  ${customs.length>0?`
+  <h3 class="mt0 mb8" style="font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em">// custom_courses (${customs.length}) — synced to Firestore</h3>
+  <div class="table-wrap mb24">
+    <table><thead><tr><th>Course</th><th>Price</th><th>Compare</th><th>Featured</th><th>Visible</th><th>Actions</th></tr></thead><tbody>
+    ${customs.map(c=>{
+      return `<tr>
+        <td><div class="row" style="gap:10px"><img class="thumb" src="${esc(c.thumbnail||'')}" alt=""/><div><div class="strong" style="max-width:220px">${esc(c.title)}</div><div class="muted">${esc(c.subtitle||'')}</div></div></div></td>
+        <td class="strong">${CUR}${fmt(c.price||0)}</td>
+        <td class="muted">${c.comparePrice?CUR+fmt(c.comparePrice):'—'}</td>
+        <td>${c.featured?'<span class="badge b-brand">YES</span>':'—'}</td>
+        <td>${c.published!==false?'<span class="badge b-approved">LIVE</span>':'<span class="badge b-rejected">HIDDEN</span>'}</td>
+        <td>
+          <div class="row" style="gap:4px">
+            <button class="btn sm" onclick="openCourseForm('${c.id}')">Edit</button>
+            <button class="btn sm danger" onclick="deleteCustomCourse('${c.id}')">Delete</button>
+          </div>
+        </td>
+      </tr>`;
+    }).join("")}
+    </tbody></table>
+  </div>`:'<div class="card mb24" style="text-align:center;padding:32px;color:var(--muted)">No custom courses yet. Click "Add New Course" to create one.</div>'}
+
+  <h3 class="mt0 mb8" style="font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em">// catalog_courses (${list.length}) — override only</h3>
   <div class="table-wrap">
     <table><thead><tr><th>Course</th><th>Instructor</th><th>Price</th><th>Compare</th><th>Featured</th><th>Visible</th><th>Action</th></tr></thead><tbody>
     ${list.map(c=>{
@@ -547,16 +649,192 @@ function saveCourse(cid){
   update(s=>{
     s.courseOverrides=s.courseOverrides||{};
     s.courseOverrides[cid]={...(s.courseOverrides[cid]||{}),...fields};
-    // remove null comparePrice
     if(fields.comparePrice===null&&s.courseOverrides[cid])delete s.courseOverrides[cid].comparePrice;
     log(s,"COURSE_UPDATED","Updated course "+cid);
   });
-  toast("Course updated — reload store to see");
+  toast("Course updated");
+}
+
+/* ---- Course Form (Add/Edit custom course) ---- */
+function openCourseForm(id){
+  const s=read();
+  const c = id ? (s.customCourses||[]).find(x=>x.id===id) : null;
+  const isEdit = !!c;
+  $("#modalInner").innerHTML=`
+    <div class="modal-head"><div><h3>${isEdit?'Edit Course':'Add New Course'}</h3></div><button class="btn ghost sm" onclick="closeModal()">x</button></div>
+    <div class="modal-body">
+      <div class="field"><label>Course Title *</label><input id="cf_title" placeholder="Course name" value="${esc(c?.title||'')}"/></div>
+      <div class="field"><label>Subtitle</label><input id="cf_subtitle" placeholder="Short description" value="${esc(c?.subtitle||'')}"/></div>
+      <div class="field"><label>Description</label><textarea id="cf_desc" placeholder="Course description...">${esc(c?.description||'')}</textarea></div>
+      <div class="field">
+        <label>Thumbnail Image</label>
+        <div style="display:flex;align-items:center;gap:12px">
+          ${c?.thumbnail?`<img id="cf_thumb_preview" src="${esc(c.thumbnail)}" alt="" style="width:80px;height:50px;object-fit:cover;border:1px solid var(--border);border-radius:8px;background:#000"/>`:`<div id="cf_thumb_preview" style="width:80px;height:50px;border:1px dashed var(--border);border-radius:8px;display:grid;place-items:center;color:var(--muted);font-size:9px">No img</div>`}
+          <div style="flex:1">
+            <label class="btn sm" style="cursor:pointer">Upload Image<input type="file" accept="image/*" style="display:none" onchange="uploadCourseThumb(event)"/></label>
+            <input id="cf_thumb" type="hidden" value="${esc(c?.thumbnail||'')}"/>
+            <input id="cf_thumb_url" placeholder="...or paste image URL" value="${esc(c?.thumbnail&&c.thumbnail.startsWith('http')?c.thumbnail:'')}" style="margin-top:6px" oninput="syncCourseThumb()"/>
+          </div>
+        </div>
+      </div>
+      <div class="field"><label>Download Link (Google Drive, Dropbox, etc.)</label><input id="cf_download" placeholder="https://drive.google.com/..." value="${esc(c?.downloadUrl||'')}"/></div>
+      <div class="grid-2">
+        <div class="field"><label>Price (INR) *</label><input id="cf_price" type="number" value="${c?.price||4999}"/></div>
+        <div class="field"><label>Compare Price (INR)</label><input id="cf_compare" type="number" value="${c?.comparePrice||''}"/></div>
+      </div>
+      <div class="grid-2">
+        <div class="field"><label>Level</label><select id="cf_level"><option value="BEGINNER" ${c?.level==='BEGINNER'?'selected':''}>Beginner</option><option value="INTERMEDIATE" ${c?.level==='INTERMEDIATE'?'selected':''}>Intermediate</option><option value="ADVANCED" ${c?.level==='ADVANCED'?'selected':''}>Advanced</option></select></div>
+        <div class="field"><label>Instructor Name</label><input id="cf_instructor" placeholder="Instructor" value="${esc(c?.instructorId||'')}"/></div>
+      </div>
+      <div class="grid-2">
+        <div class="field"><label>Featured</label><label class="switch"><input type="checkbox" id="cf_featured" ${c?.featured?'checked':''}/><span class="track"></span></label></div>
+        <div class="field"><label>Published (visible)</label><label class="switch"><input type="checkbox" id="cf_published" ${c?.published!==false?'checked':''}/><span class="track"></span></label></div>
+      </div>
+      <div class="row mt24" style="gap:8px">
+        <button class="btn primary" onclick="saveCourseForm('${id||''}')" style="flex:1;justify-content:center">${isEdit?'Update Course':'Create Course'}</button>
+        <button class="btn" onclick="closeModal()">Cancel</button>
+      </div>
+    </div>`;
+  $("#modal").classList.add("open");
+}
+function uploadCourseThumb(e){
+  const f=e.target.files[0];if(!f)return;
+  if(f.size>800000){toast("Image too large (max 800KB)",1);return}
+  const r=new FileReader();
+  r.onload=()=>{
+    $("#cf_thumb").value=r.result;
+    const prev=$("#cf_thumb_preview");
+    if(prev.tagName==='IMG'){prev.src=r.result}else{const img=document.createElement('img');img.id='cf_thumb_preview';img.src=r.result;img.style.cssText='width:80px;height:50px;object-fit:cover;border:1px solid var(--border);border-radius:8px;background:#000';prev.replaceWith(img)}
+    $("#cf_thumb_url").value="";
+    toast("Thumbnail uploaded");
+  };
+  r.readAsDataURL(f);
+}
+function syncCourseThumb(){
+  const url=($("#cf_thumb_url").value||"").trim();
+  $("#cf_thumb").value=url;
+  const prev=$("#cf_thumb_preview");
+  if(url){
+    if(prev.tagName==='IMG'){prev.src=url}else{const img=document.createElement('img');img.id='cf_thumb_preview';img.src=url;img.style.cssText='width:80px;height:50px;object-fit:cover;border:1px solid var(--border);border-radius:8px;background:#000';prev.replaceWith(img)}
+  }
+}
+function saveCourseForm(id){
+  const title=($("#cf_title").value||"").trim();
+  if(!title){toast("Enter a title",1);return}
+  const price=Number($("#cf_price").value)||0;
+  const subtitle=($("#cf_subtitle").value||"").trim();
+  const desc=($("#cf_desc").value||"").trim();
+  const thumb=($("#cf_thumb").value||"").trim()||($("#cf_thumb_url").value||"").trim()||"https://picsum.photos/seed/"+encodeURIComponent(title)+"/800/450";
+  const downloadUrl=($("#cf_download").value||"").trim()||undefined;
+  const compare=($("#cf_compare").value)?Number($("#cf_compare").value):undefined;
+  const level=($("#cf_level").value||"BEGINNER");
+  const instructor=($("#cf_instructor").value||"Admin").trim();
+  const featured=$("#cf_featured").checked;
+  const published=$("#cf_published").checked;
+  update(s=>{
+    if(id){
+      s.customCourses=s.customCourses.map(c=>c.id===id?{...c,title,subtitle,description:desc,thumbnail:thumb,downloadUrl,price,comparePrice:compare,level,instructorId:instructor,featured,published,updatedAt:new Date().toISOString()}:c);
+      log(s,"COURSE_EDITED","Edited course: "+title);
+    }else{
+      const nid="custom-"+Date.now();
+      const slug=title.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')+'-'+nid.slice(-4);
+      s.customCourses.unshift({
+        id:nid,slug,title,subtitle,description:desc,thumbnail:thumb,downloadUrl,price,comparePrice:compare,currency:"INR",level,language:"English",durationMins:0,benefits:[],requirements:[],faqs:[],featured,published,rating:0,reviewCount:0,studentCount:0,instructorId:instructor,categoryId:"cat-web",tags:[],sections:[],createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()
+      });
+      log(s,"COURSE_CREATED","Created course: "+title);
+    }
+  });
+  closeModal();
+  toast(id?"Course updated":"Course created — syncing to Firestore...");
+  fsSyncCourses(); // push to Firestore for cross-device sync
+}
+function deleteCustomCourse(id){
+  if(!confirm("Delete this course? It will be removed from Firestore and all devices."))return;
+  update(s=>{s.customCourses=s.customCourses.filter(c=>c.id!==id);log(s,"COURSE_DELETED","Deleted course "+id)});
+  toast("Course deleted");
+  fsDeleteCourse(id); // remove from Firestore
 }
 
 /* ============================================================
    COUPONS
    ============================================================ */
+/* ============================================================
+   PAYMENT SETTINGS
+   ============================================================ */
+function renderPayment(s){
+  const p=s.paymentSettings||{};
+  return `
+  <div class="card mb16" style="background:rgba(16,185,129,.06);border-color:rgba(16,185,129,.2)">
+    <div class="row" style="gap:10px"><span style="font-size:18px">💳</span><div>Configure how students pay you. These settings appear on the checkout page. Saved to Firestore for cross-device sync.</div></div>
+  </div>
+  <div class="grid" style="grid-template-columns:1fr 1fr;gap:16px">
+    <div class="card">
+      <h3 class="mt0 mb16">UPI / QR Settings</h3>
+      <div class="field"><label>UPI ID *</label><input id="ps_upi" value="${esc(p.upiId||'aadarshkumar.co@okhdfcbank')}" placeholder="aadarshkumar.co@okhdfcbank"/></div>
+      <div class="field"><label>Payee Name</label><input id="ps_payee" value="${esc(p.payeeName||'Aadarsh Kumar')}" placeholder="Aadarsh Kumar"/></div>
+      <div class="field">
+        <label>QR Code Image</label>
+        <div style="display:flex;align-items:center;gap:12px">
+          ${p.qrImage?`<img src="${esc(p.qrImage)}" alt="QR" style="width:80px;height:80px;object-fit:contain;border:1px solid var(--border);border-radius:8px;background:#fff;padding:4px"/>`:`<div style="width:80px;height:80px;border:1px dashed var(--border);border-radius:8px;display:grid;place-items:center;color:var(--muted);font-size:10px">No QR</div>`}
+          <div style="flex:1">
+            <label class="btn sm" style="cursor:pointer">Upload QR<input type="file" accept="image/*" style="display:none" onchange="uploadQR(event)"/></label>
+            ${p.qrImage?`<button class="btn sm danger" onclick="removeQR()" style="margin-left:8px">Remove</button>`:''}
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <h3 class="mt0 mb16">Payment Methods</h3>
+      <div class="field"><label class="switch"><input type="checkbox" id="ps_m_upi" ${p.methods?.upi!==false?'checked':''}/><span class="track"></span><span>UPI (GPay, PhonePe, Paytm)</span></label></div>
+      <div class="field"><label class="switch"><input type="checkbox" id="ps_m_bank" ${p.methods?.bank?'checked':''}/><span class="track"></span><span>Bank Transfer (IMPS/NEFT/RTGS)</span></label></div>
+      <div class="field"><label class="switch"><input type="checkbox" id="ps_m_card" ${p.methods?.card?'checked':''}/><span class="track"></span><span>Credit/Debit Card (info only)</span></label></div>
+    </div>
+  </div>
+  <div class="card mt16">
+    <h3 class="mt0 mb16">Bank Transfer Details</h3>
+    <div class="grid-2">
+      <div class="field"><label>Account Name</label><input id="ps_acct_name" value="${esc(p.bankDetails?.accountName||'')}" placeholder="Aadarsh Kumar"/></div>
+      <div class="field"><label>Account Number</label><input id="ps_acct_no" value="${esc(p.bankDetails?.accountNumber||'')}" placeholder="00000000000000000"/></div>
+      <div class="field"><label>IFSC Code</label><input id="ps_ifsc" value="${esc(p.bankDetails?.ifsc||'')}" placeholder="HDFC0001234"/></div>
+      <div class="field"><label>Bank Name</label><input id="ps_bank_name" value="${esc(p.bankDetails?.bankName||'')}" placeholder="HDFC Bank"/></div>
+    </div>
+  </div>
+  <div class="card mt16">
+    <h3 class="mt0 mb16">Checkout Instructions & Greeting</h3>
+    <div class="field"><label>Payment Instructions (shown on checkout)</label><textarea id="ps_instructions" placeholder="Make payment to UPI...">${esc(p.instructions||'')}</textarea></div>
+    <div class="field"><label>Greeting Message (shown after checkout + in approval notification)</label><textarea id="ps_greeting" placeholder="Thank you for enrolling! ...">${esc(p.greetingMessage||'')}</textarea></div>
+  </div>
+  <div class="row mt16"><button class="btn primary" onclick="savePayment()" style="flex:1;justify-content:center">Save Payment Settings</button></div>
+  `;
+}
+function uploadQR(e){
+  const f=e.target.files[0];if(!f)return;
+  if(f.size>500000){toast("QR image too large (max 500KB)",1);return}
+  const r=new FileReader();
+  r.onload=()=>{
+    update(s=>{s.paymentSettings=s.paymentSettings||{};s.paymentSettings.qrImage=r.result;log(s,"PAYMENT_QR_UPDATED","Updated QR code")});
+    toast("QR uploaded");
+  };
+  r.readAsDataURL(f);
+}
+function removeQR(){
+  update(s=>{s.paymentSettings=s.paymentSettings||{};s.paymentSettings.qrImage="";log(s,"PAYMENT_QR_REMOVED","Removed QR code")});
+  toast("QR removed");
+}
+function savePayment(){
+  const patch={
+    upiId:($("#ps_upi").value||"").trim(),
+    payeeName:($("#ps_payee").value||"").trim(),
+    methods:{upi:$("#ps_m_upi").checked,bank:$("#ps_m_bank").checked,card:$("#ps_m_card").checked},
+    bankDetails:{accountName:($("#ps_acct_name").value||"").trim(),accountNumber:($("#ps_acct_no").value||"").trim(),ifsc:($("#ps_ifsc").value||"").trim(),bankName:($("#ps_bank_name").value||"").trim()},
+    instructions:($("#ps_instructions").value||"").trim(),
+    greetingMessage:($("#ps_greeting").value||"").trim(),
+  };
+  update(s=>{s.paymentSettings={...s.paymentSettings,...patch};log(s,"PAYMENT_SETTINGS_SAVED","Saved payment settings")});
+  toast("Payment settings saved");
+  fsSyncPayment(); // push to Firestore
+}
+
 function renderCoupons(s){
   return `
   <div class="grid" style="grid-template-columns:1fr 320px;gap:16px">
@@ -752,6 +1030,8 @@ function bindHandlers(){}
   await loadCourses();
   $$("#nav button").forEach(b=>b.classList.toggle("active",b.dataset.tab===TAB));
   render();
+  // Pull courses from Firestore (cross-device sync)
+  setTimeout(fsPullCourses, 1500);
   // re-sync if another tab changes localStorage
   window.addEventListener("storage",e=>{if(e.key===KEY)render()});
 })();
