@@ -93,9 +93,19 @@ function EmptyCheckoutState() {
 
 export function CheckoutView() {
   const checkoutCourseId = useLms((s) => s.checkoutCourseId);
+  const customCourses = useLms((s) => s.customCourses);
+  const courseOverrides = useLms((s) => s.courseOverrides);
   const course = useMemo(
-    () => (checkoutCourseId ? courseMap[checkoutCourseId] : null),
-    [checkoutCourseId]
+    () => {
+      if (!checkoutCourseId) return null;
+      // Check catalog first, apply overrides
+      const base = courseMap[checkoutCourseId];
+      if (base) return { ...base, ...(courseOverrides[checkoutCourseId] || {}) };
+      // Then check custom courses (admin-added)
+      const custom = customCourses.find((c) => c.id === checkoutCourseId);
+      return custom || null;
+    },
+    [checkoutCourseId, customCourses, courseOverrides]
   );
 
   if (!course) return <EmptyCheckoutState />;

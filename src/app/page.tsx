@@ -1,6 +1,6 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
+import { useSyncExternalStore, useEffect } from "react";
 import { GraduationCap } from "lucide-react";
 import { useLms } from "@/lib/store";
 import { Navbar } from "@/components/lms/navbar";
@@ -59,7 +59,24 @@ function renderView(view: string) {
 
 export default function Home() {
   const view = useLms((s) => s.view);
+  const user = useLms((s) => s.user);
+  const setAuthOpen = useLms((s) => s.setAuthOpen);
   const mounted = useMounted();
+
+  // First-visit login prompt: open auth modal once if user has never
+  // logged in (tracked via localStorage flag so it doesn't nag returning users).
+  useEffect(() => {
+    if (!mounted) return;
+    try {
+      const seen = localStorage.getItem("waynes-welcome-shown");
+      if (!seen && !user) {
+        setAuthOpen(true, "login");
+        localStorage.setItem("waynes-welcome-shown", "1");
+      }
+    } catch {
+      // ignore (WebView / private mode)
+    }
+  }, [mounted, user, setAuthOpen]);
 
   if (!mounted) {
     return (
