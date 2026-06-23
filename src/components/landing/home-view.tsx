@@ -247,7 +247,7 @@ export function HomeView() {
                     <span className="text-primary/70">$</span> nmap -sV waynes.io
                   </div>
                   <div className="text-cyan-400/80">
-                    {"> "}{courses.length || platformStats.courses} courses found. All systems go.
+                    {"> "}{courses.length > 0 ? `${courses.length} courses found. All systems go.` : "awaiting course data..."}
                     <span className="cursor-blink text-primary" />
                   </div>
                 </div>
@@ -289,7 +289,7 @@ export function HomeView() {
                     <span className="text-cyan-400/80">recon/  exploit/  report/</span>{"\n\n"}
                     <span className="text-primary/70">$</span> ./learn --start{"\n"}
                     <span className="text-primary">{">"} booting labs...</span>{"\n"}
-                    <span className="text-primary">{">"} 8 courses loaded</span>{"\n"}
+                    <span className="text-primary">{">"} {courses.length > 0 ? `${courses.length} courses loaded` : "no courses yet"}</span>{"\n"}
                     <span className="text-primary">{">"} access: <span className="text-amber-400">GRANTED</span></span>
                     <span className="cursor-blink text-primary" />
                   </pre>

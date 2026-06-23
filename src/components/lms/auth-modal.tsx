@@ -58,6 +58,7 @@ export function AuthModal() {
   const {
     authOpen,
     authMode,
+    user,
     setAuthOpen,
     login,
     signup,
@@ -126,9 +127,10 @@ export function AuthModal() {
   const meta = MODE_META[authMode];
 
   return (
-    <Dialog open={authOpen} onOpenChange={(o) => { /* Mandatory login — prevent closing by clicking outside */ if (!o && !user) return; setAuthOpen(o); }}>
+    <Dialog open={authOpen} onOpenChange={(o) => { if (!o && !user) return; setAuthOpen(o); }}>
       <DialogContent
-        className="terminal-window scanlines relative max-w-md overflow-hidden p-0"
+        className="relative max-w-md overflow-hidden border-2 border-primary/40 bg-background p-0 shadow-2xl"
+        showCloseButton={!!user}
         onEscapeKeyDown={(e) => { if (!user) e.preventDefault(); }}
         onPointerDownOutside={(e) => { if (!user) e.preventDefault(); }}
         onInteractOutside={(e) => { if (!user) e.preventDefault(); }}
