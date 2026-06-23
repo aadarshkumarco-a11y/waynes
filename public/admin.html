@@ -175,6 +175,7 @@
       <button data-tab="announcements"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg> Announcements</button>
       <button data-tab="activity"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> Activity Log</button>
       <div class="sec">System</div>
+      <button data-tab="payment"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg> Payment</button>
       <button data-tab="data"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg> Data Tools</button>
     </nav>
     <div style="padding:16px 8px 4px;border-top:1px solid var(--border);margin-top:12px">
@@ -255,6 +256,16 @@ function seedState(){
       {id:"cp-3",code:"BOUNTY25",type:"PERCENT",value:25,courseId:"course-3",startsAt:"2025-01-01T00:00:00Z",expiresAt:"2026-12-31T23:59:59Z",usageLimit:200,usedCount:33,perUserLimit:1,minAmount:0,active:true},
     ],
     courseOverrides:{},
+    customCourses:[],
+    paymentSettings:{
+      upiId:"waynes@upi",
+      payeeName:"Waynes",
+      qrImage:"",
+      methods:{upi:true,bank:true,card:false},
+      bankDetails:{accountName:"Waynes",accountNumber:"00000000000000000",ifsc:"XXXX0000000",bankName:"Your Bank"},
+      instructions:"Make payment via UPI/Bank Transfer, then enter your transaction reference below. We verify and grant access within minutes.",
+      greetingMessage:"Thank you for enrolling! Your payment is being verified. You'll get access within minutes. Check your notifications. — Team Waynes"
+    },
     items:[],
     appliedCouponCode:null,
   };
@@ -284,6 +295,8 @@ function read(){
     const s=p.state;
     ["orders","enrollments","couponList","notifications","announcements","activities","certificates","notes","bookmarks","items"].forEach(k=>{if(!Array.isArray(s[k]))s[k]=[]});
     if(!s.courseOverrides)s.courseOverrides={};
+    if(!Array.isArray(s.customCourses))s.customCourses=[];
+    if(!s.paymentSettings)s.paymentSettings={upiId:"waynes@upi",payeeName:"Waynes",qrImage:"",methods:{upi:true,bank:true,card:false},bankDetails:{accountName:"Waynes",accountNumber:"00000000000000000",ifsc:"XXXX0000000",bankName:"Your Bank"},instructions:"Make payment via UPI/Bank Transfer, then enter your transaction reference below. We verify and grant access within minutes.",greetingMessage:"Thank you for enrolling! Your payment is being verified. You'll get access within minutes. — Team Waynes"};
     return s;
   }catch(e){const s=seedState();write(s);return s;}
 }
@@ -325,12 +338,13 @@ $$("#nav button").forEach(b=>b.addEventListener("click",()=>setTab(b.dataset.tab
 const TITLES={
   dashboard:["Dashboard","Store overview & live metrics"],
   orders:["Orders","Approve, reject & refund orders"],
-  courses:["Courses","Manage pricing, featured & visibility"],
+  courses:["Courses","Add, edit & manage course catalog"],
   coupons:["Coupons","Create & manage discount codes"],
   students:["Students","Learners derived from orders"],
   notifications:["Notifications","Broadcast to learners"],
   announcements:["Announcements","Pinned store-wide messages"],
   activity:["Activity Log","Audit trail of all actions"],
+  payment:["Payment","UPI ID, QR code, bank details & checkout message"],
   data:["Data Tools","Backup, restore & reset"],
 };
 
@@ -352,6 +366,7 @@ function render(){
   if(TAB==="announcements")c.innerHTML=renderAnnouncements(s);
   if(TAB==="activity")c.innerHTML=renderActivity(s);
   if(TAB==="data")c.innerHTML=renderData(s);
+  if(TAB==="payment")c.innerHTML=renderPayment(s);
   bindHandlers();
 }
 
@@ -512,10 +527,38 @@ async function loadCourses(){
 function renderCourses(s){
   const ov=s.courseOverrides||{};
   const list=courseList||CATARR;
+  const customs=s.customCourses||[];
   return `
-  <div class="card mb16" style="background:rgba(16,185,129,.06);border-color:rgba(16,185,129,.2)">
-    <div class="row" style="gap:10px"><span style="font-size:18px">💡</span><div><strong>Course content</strong> is defined in code. Here you control <strong>pricing, discounts, featured & visibility</strong> — changes apply live to the store (reload the store tab to see them).</div></div>
+  <div class="row between mb16">
+    <div class="card mb0" style="background:rgba(16,185,129,.06);border-color:rgba(16,185,129,.2);flex:1;margin-right:12px">
+      <div class="row" style="gap:10px"><span style="font-size:18px">💡</span><div><strong>Catalog courses</strong> are defined in code — override pricing, featured & visibility here. <strong>Custom courses</strong> (added below) have full CRUD and appear on the store instantly.</div></div>
+    </div>
+    <button class="btn primary" onclick="openCourseForm()">+ Add New Course</button>
   </div>
+
+  ${customs.length>0?`
+  <h3 class="mt0 mb8" style="font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em">// custom_courses (${customs.length})</h3>
+  <div class="table-wrap mb24">
+    <table><thead><tr><th>Course</th><th>Price</th><th>Compare</th><th>Featured</th><th>Visible</th><th>Actions</th></tr></thead><tbody>
+    ${customs.map(c=>{
+      return `<tr>
+        <td><div class="row" style="gap:10px"><img class="thumb" src="${esc(c.thumbnail||'')}" alt=""/><div><div class="strong" style="max-width:220px">${esc(c.title)}</div><div class="muted">${esc(c.subtitle||'')}</div></div></div></td>
+        <td class="strong">${CUR}${fmt(c.price||0)}</td>
+        <td class="muted">${c.comparePrice?CUR+fmt(c.comparePrice):'—'}</td>
+        <td>${c.featured?'<span class="badge b-brand">YES</span>':'—'}</td>
+        <td>${c.published!==false?'<span class="badge b-approved">LIVE</span>':'<span class="badge b-rejected">HIDDEN</span>'}</td>
+        <td>
+          <div class="row" style="gap:4px">
+            <button class="btn sm" onclick="openCourseForm('${c.id}')">Edit</button>
+            <button class="btn sm danger" onclick="deleteCustomCourse('${c.id}')">Delete</button>
+          </div>
+        </td>
+      </tr>`;
+    }).join("")}
+    </tbody></table>
+  </div>`:''}
+
+  <h3 class="mt0 mb8" style="font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em">// catalog_courses (${list.length}) — override only</h3>
   <div class="table-wrap">
     <table><thead><tr><th>Course</th><th>Instructor</th><th>Price</th><th>Compare</th><th>Featured</th><th>Visible</th><th>Action</th></tr></thead><tbody>
     ${list.map(c=>{
@@ -547,16 +590,156 @@ function saveCourse(cid){
   update(s=>{
     s.courseOverrides=s.courseOverrides||{};
     s.courseOverrides[cid]={...(s.courseOverrides[cid]||{}),...fields};
-    // remove null comparePrice
     if(fields.comparePrice===null&&s.courseOverrides[cid])delete s.courseOverrides[cid].comparePrice;
     log(s,"COURSE_UPDATED","Updated course "+cid);
   });
   toast("Course updated — reload store to see");
 }
 
+/* ---- Course Form (Add/Edit custom course) ---- */
+function openCourseForm(id){
+  const s=read();
+  const c = id ? (s.customCourses||[]).find(x=>x.id===id) : null;
+  const isEdit = !!c;
+  $("#modalInner").innerHTML=`
+    <div class="modal-head"><div><h3>${isEdit?'Edit Course':'Add New Course'}</h3><div class="sub" style="color:var(--muted);font-size:12px">${isEdit?'Edit custom course details':'Create a new course — appears on store instantly'}</div></div><button class="btn ghost sm" onclick="closeModal()">x</button></div>
+    <div class="modal-body">
+      <div class="field"><label>Course Title *</label><input id="cf_title" placeholder="Ethical Hacking Bootcamp" value="${esc(c?.title||'')}"/></div>
+      <div class="field"><label>Subtitle</label><input id="cf_subtitle" placeholder="Go from beginner to pro" value="${esc(c?.subtitle||'')}"/></div>
+      <div class="field"><label>Description</label><textarea id="cf_desc" placeholder="Course description...">${esc(c?.description||'')}</textarea></div>
+      <div class="field"><label>Thumbnail URL</label><input id="cf_thumb" placeholder="https://..." value="${esc(c?.thumbnail||'')}"/></div>
+      <div class="grid-2">
+        <div class="field"><label>Price (INR) *</label><input id="cf_price" type="number" value="${c?.price||4999}"/></div>
+        <div class="field"><label>Compare Price (INR)</label><input id="cf_compare" type="number" value="${c?.comparePrice||''}"/></div>
+      </div>
+      <div class="grid-2">
+        <div class="field"><label>Level</label><select id="cf_level"><option value="BEGINNER" ${c?.level==='BEGINNER'?'selected':''}>Beginner</option><option value="INTERMEDIATE" ${c?.level==='INTERMEDIATE'?'selected':''}>Intermediate</option><option value="ADVANCED" ${c?.level==='ADVANCED'?'selected':''}>Advanced</option></select></div>
+        <div class="field"><label>Instructor Name</label><input id="cf_instructor" placeholder="Ghost404" value="${esc(c?.instructorId||'')}"/></div>
+      </div>
+      <div class="field"><label>Benefits (one per line)</label><textarea id="cf_benefits" placeholder="Master Kali Linux&#10;Real labs&#10;OSCP ready">${esc((c?.benefits||[]).join('\n'))}</textarea></div>
+      <div class="field"><label>Requirements (one per line)</label><textarea id="cf_req" placeholder="Basic computer skills&#10;8GB RAM">${esc((c?.requirements||[]).join('\n'))}</textarea></div>
+      <div class="grid-2">
+        <div class="field"><label>Featured</label><label class="switch"><input type="checkbox" id="cf_featured" ${c?.featured?'checked':''}/><span class="track"></span></label></div>
+        <div class="field"><label>Published (visible)</label><label class="switch"><input type="checkbox" id="cf_published" ${c?.published!==false?'checked':''}/><span class="track"></span></label></div>
+      </div>
+      <div class="row mt24" style="gap:8px">
+        <button class="btn primary" onclick="saveCourseForm('${id||''}')" style="flex:1;justify-content:center">${isEdit?'Update Course':'Create Course'}</button>
+        <button class="btn" onclick="closeModal()">Cancel</button>
+      </div>
+    </div>`;
+  $("#modal").classList.add("open");
+}
+function saveCourseForm(id){
+  const title=($("#cf_title").value||"").trim();
+  if(!title){toast("Enter a title",1);return}
+  const price=Number($("#cf_price").value)||0;
+  const subtitle=($("#cf_subtitle").value||"").trim();
+  const desc=($("#cf_desc").value||"").trim();
+  const thumb=($("#cf_thumb").value||"").trim()||"https://picsum.photos/seed/"+encodeURIComponent(title)+"/800/450";
+  const compare=($("#cf_compare").value)?Number($("#cf_compare").value):undefined;
+  const level=($("#cf_level").value||"BEGINNER");
+  const instructor=($("#cf_instructor").value||"Admin").trim();
+  const benefits=($("#cf_benefits").value||"").split('\n').map(s=>s.trim()).filter(Boolean);
+  const requirements=($("#cf_req").value||"").split('\n').map(s=>s.trim()).filter(Boolean);
+  const featured=$("#cf_featured").checked;
+  const published=$("#cf_published").checked;
+  update(s=>{
+    if(id){
+      s.customCourses=s.customCourses.map(c=>c.id===id?{...c,title,subtitle,description:desc,thumbnail:thumb,price,comparePrice:compare,level,instructorId:instructor,benefits,requirements,featured,published,updatedAt:new Date().toISOString()}:c);
+      log(s,"COURSE_EDITED","Edited course: "+title);
+    }else{
+      const nid="custom-"+Date.now();
+      const slug=title.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')+'-'+nid.slice(-4);
+      s.customCourses.unshift({
+        id:nid,slug,title,subtitle,description:desc,thumbnail:thumb,price,comparePrice:compare,currency:"INR",level,language:"English",durationMins:0,benefits,requirements,faqs:[],featured,published,rating:0,reviewCount:0,studentCount:0,instructorId:instructor,categoryId:"cat-web",tags:[],sections:[],createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()
+      });
+      log(s,"COURSE_CREATED","Created course: "+title);
+    }
+  });
+  closeModal();
+  toast(id?"Course updated — reload store":"Course created — reload store");
+}
+function deleteCustomCourse(id){
+  if(!confirm("Delete this custom course? This cannot be undone."))return;
+  update(s=>{s.customCourses=s.customCourses.filter(c=>c.id!==id);log(s,"COURSE_DELETED","Deleted course "+id)});
+  toast("Course deleted");
+}
+
 /* ============================================================
-   COUPONS
+   PAYMENT SETTINGS
    ============================================================ */
+function renderPayment(s){
+  const p=s.paymentSettings||{};
+  return `
+  <div class="card mb16" style="background:rgba(16,185,129,.06);border-color:rgba(16,185,129,.2)">
+    <div class="row" style="gap:10px"><span style="font-size:18px">💳</span><div>Configure how students pay you. These settings appear on the <strong>checkout page</strong> of the main store. No payment gateway — students pay via UPI/Bank, enter their transaction reference, and you verify manually in the Orders tab.</div></div>
+  </div>
+  <div class="grid" style="grid-template-columns:1fr 1fr;gap:16px">
+    <div class="card">
+      <h3 class="mt0 mb16">UPI / QR Settings</h3>
+      <div class="field"><label>UPI ID *</label><input id="ps_upi" value="${esc(p.upiId||'')}" placeholder="waynes@upi"/></div>
+      <div class="field"><label>Payee Name</label><input id="ps_payee" value="${esc(p.payeeName||'')}" placeholder="Waynes"/></div>
+      <div class="field">
+        <label>QR Code Image</label>
+        <div style="display:flex;align-items:center;gap:12px">
+          ${p.qrImage?`<img src="${esc(p.qrImage)}" alt="QR" style="width:80px;height:80px;object-fit:contain;border:1px solid var(--border);border-radius:8px;background:#fff;padding:4px"/>`:`<div style="width:80px;height:80px;border:1px dashed var(--border);border-radius:8px;display:grid;place-items:center;color:var(--muted);font-size:10px">No QR</div>`}
+          <div style="flex:1">
+            <label class="btn sm" style="cursor:pointer">Upload QR<input type="file" accept="image/*" style="display:none" onchange="uploadQR(event)"/></label>
+            ${p.qrImage?`<button class="btn sm danger" onclick="removeQR()" style="margin-left:8px">Remove</button>`:''}
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <h3 class="mt0 mb16">Payment Methods</h3>
+      <div class="field"><label class="switch"><input type="checkbox" id="ps_m_upi" ${p.methods?.upi?'checked':''}/><span class="track"></span><span>UPI (GPay, PhonePe, Paytm)</span></label></div>
+      <div class="field"><label class="switch"><input type="checkbox" id="ps_m_bank" ${p.methods?.bank?'checked':''}/><span class="track"></span><span>Bank Transfer (IMPS/NEFT/RTGS)</span></label></div>
+      <div class="field"><label class="switch"><input type="checkbox" id="ps_m_card" ${p.methods?.card?'checked':''}/><span class="track"></span><span>Credit/Debit Card (info only)</span></label></div>
+    </div>
+  </div>
+  <div class="card mt16">
+    <h3 class="mt0 mb16">Bank Transfer Details</h3>
+    <div class="grid-2">
+      <div class="field"><label>Account Name</label><input id="ps_acct_name" value="${esc(p.bankDetails?.accountName||'')}" placeholder="Waynes"/></div>
+      <div class="field"><label>Account Number</label><input id="ps_acct_no" value="${esc(p.bankDetails?.accountNumber||'')}" placeholder="00000000000000000"/></div>
+      <div class="field"><label>IFSC Code</label><input id="ps_ifsc" value="${esc(p.bankDetails?.ifsc||'')}" placeholder="HDFC0001234"/></div>
+      <div class="field"><label>Bank Name</label><input id="ps_bank_name" value="${esc(p.bankDetails?.bankName||'')}" placeholder="HDFC Bank"/></div>
+    </div>
+  </div>
+  <div class="card mt16">
+    <h3 class="mt0 mb16">Checkout Instructions & Greeting</h3>
+    <div class="field"><label>Payment Instructions (shown on checkout)</label><textarea id="ps_instructions" placeholder="Make payment to UPI, then enter transaction reference...">${esc(p.instructions||'')}</textarea></div>
+    <div class="field"><label>Greeting Message (shown after checkout)</label><textarea id="ps_greeting" placeholder="Thank you for enrolling! ...">${esc(p.greetingMessage||'')}</textarea></div>
+  </div>
+  <div class="row mt16"><button class="btn primary" onclick="savePayment()" style="flex:1;justify-content:center">Save Payment Settings</button></div>
+  `;
+}
+function uploadQR(e){
+  const f=e.target.files[0];if(!f)return;
+  if(f.size>500000){toast("QR image too large (max 500KB)",1);return}
+  const r=new FileReader();
+  r.onload=()=>{
+    update(s=>{s.paymentSettings=s.paymentSettings||{};s.paymentSettings.qrImage=r.result;log(s,"PAYMENT_QR_UPDATED","Updated QR code")});
+    toast("QR uploaded");
+  };
+  r.readAsDataURL(f);
+}
+function removeQR(){
+  update(s=>{s.paymentSettings=s.paymentSettings||{};s.paymentSettings.qrImage="";log(s,"PAYMENT_QR_REMOVED","Removed QR code")});
+  toast("QR removed");
+}
+function savePayment(){
+  const patch={
+    upiId:($("#ps_upi").value||"").trim(),
+    payeeName:($("#ps_payee").value||"").trim(),
+    methods:{upi:$("#ps_m_upi").checked,bank:$("#ps_m_bank").checked,card:$("#ps_m_card").checked},
+    bankDetails:{accountName:($("#ps_acct_name").value||"").trim(),accountNumber:($("#ps_acct_no").value||"").trim(),ifsc:($("#ps_ifsc").value||"").trim(),bankName:($("#ps_bank_name").value||"").trim()},
+    instructions:($("#ps_instructions").value||"").trim(),
+    greetingMessage:($("#ps_greeting").value||"").trim(),
+  };
+  update(s=>{s.paymentSettings={...s.paymentSettings,...patch};log(s,"PAYMENT_SETTINGS_SAVED","Saved payment settings")});
+  toast("Payment settings saved — reload store to see");
+}
 function renderCoupons(s){
   return `
   <div class="grid" style="grid-template-columns:1fr 320px;gap:16px">

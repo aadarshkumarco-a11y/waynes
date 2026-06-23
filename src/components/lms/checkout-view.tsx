@@ -33,37 +33,20 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useLms } from "@/lib/store";
 import { courseMap, instructorMap } from "@/lib/data/catalog";
 import { formatPrice } from "@/lib/format";
-import type { Course, Order } from "@/lib/types";
+import type { Course, Order, PaymentSettings } from "@/lib/types";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-
-const UPI_ID = "waynes@upi";
-
-const PAYMENT_METHODS = [
-  {
-    id: "UPI",
-    label: "UPI",
-    description: "GPay, PhonePe, Paytm, BHIM",
-    icon: "📱",
-  },
-  {
-    id: "BANK",
-    label: "Bank Transfer",
-    description: "IMPS / NEFT / RTGS",
-    icon: "🏦",
-  },
-  {
-    id: "CARD",
-    label: "Credit / Debit Card",
-    description: "Visa, Mastercard, RuPay",
-    icon: "💳",
-  },
-] as const;
 
 const TRUST_BADGES = [
   { label: "Lifetime access", icon: InfinityIcon },
   { label: "Verifiable certificate", icon: Award },
   { label: "30-day refund", icon: ShieldCheck },
+] as const;
+
+const ALL_METHODS = [
+  { id: "UPI", label: "UPI", description: "GPay, PhonePe, Paytm, BHIM", icon: "📱" },
+  { id: "BANK", label: "Bank Transfer", description: "IMPS / NEFT / RTGS", icon: "🏦" },
+  { id: "CARD", label: "Credit / Debit Card", description: "Visa, Mastercard, RuPay", icon: "💳" },
 ] as const;
 
 // ---------------------------------------------------------------------------
@@ -137,6 +120,10 @@ function CheckoutForm({ course }: { course: Course }) {
   const checkout = useLms((s) => s.checkout);
   const isEnrolled = useLms((s) => s.isEnrolled);
   const getEnrollment = useLms((s) => s.getEnrollment);
+  const paymentSettings = useLms((s) => s.paymentSettings);
+
+  // Derive available payment methods from admin settings
+  const paymentMethods = ALL_METHODS.filter((m) => paymentSettings.methods[m.id.toLowerCase() as "upi" | "bank" | "card"]);
 
   const [couponInput, setCouponInput] = useState("");
   const [couponMsg, setCouponMsg] = useState<{
@@ -144,7 +131,7 @@ function CheckoutForm({ course }: { course: Course }) {
     text: string;
     discount?: number;
   } | null>(null);
-  const [paymentMethod, setPaymentMethod] = useState<string>("UPI");
+  const [paymentMethod, setPaymentMethod] = useState<string>(paymentMethods[0]?.id ?? "UPI");
   const [txnRef, setTxnRef] = useState("");
   const [touched, setTouched] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -184,7 +171,7 @@ function CheckoutForm({ course }: { course: Course }) {
 
   function handleCopyUpi() {
     if (typeof navigator !== "undefined" && navigator.clipboard) {
-      navigator.clipboard.writeText(UPI_ID).then(() => {
+      navigator.clipboard.writeText(paymentSettings.upiId).then(() => {
         setCopied(true);
         toast.success("UPI ID copied to clipboard");
         setTimeout(() => setCopied(false), 1800);
@@ -277,6 +264,7 @@ function CheckoutForm({ course }: { course: Course }) {
     return (
       <SuccessScreen
         order={placedOrder}
+        greetingMessage={paymentSettings.greetingMessage}
         onContinue={() => navigate("my-learning")}
         onBack={() => openCourse(course.slug)}
       />
@@ -440,40 +428,92 @@ function CheckoutForm({ course }: { course: Course }) {
               </h2>
             </div>
 
-            {/* UPI box */}
+            {/* Payment instructions from admin */}
             <div className="mb-5 rounded-md border border-primary/30 bg-primary/5 p-4">
               <p className="font-mono text-sm text-muted-foreground">
-                <span className="text-primary">$</span> make payment to UPI:{" "}
-                <span className="font-semibold text-foreground">waynes@upi</span>,
-                then enter your transaction reference below.
+                <span className="text-primary">$</span> {paymentSettings.instructions}
               </p>
-              <div className="mt-3 flex items-center justify-between gap-3 rounded-md border border-primary/20 bg-background/80 px-3 py-2.5 backdrop-blur">
-                <div>
-                  <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-                    pay_to_upi
-                  </p>
-                  <p className="font-mono text-base font-semibold tracking-wide text-primary text-glow-green">
-                    {UPI_ID}
-                  </p>
-                </div>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={handleCopyUpi}
-                  className="border-primary/30 font-mono text-xs uppercase tracking-widest text-primary"
-                >
-                  {copied ? (
-                    <>
-                      <Check className="size-4" /> COPIED
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="size-4" /> COPY
-                    </>
-                  )}
-                </Button>
-              </div>
             </div>
+
+            {/* UPI / Payment details — shows QR + UPI ID for UPI, bank details for BANK */}
+            {paymentMethod === "UPI" && (
+              <div className="mb-5 rounded-md border border-primary/30 bg-primary/5 p-4">
+                {paymentSettings.qrImage ? (
+                  <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start">
+                    <div className="size-40 shrink-0 overflow-hidden rounded-lg border border-primary/30 bg-white p-2">
+                      <img
+                        src={paymentSettings.qrImage}
+                        alt="Payment QR Code"
+                        className="size-full object-contain"
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-mono text-xs uppercase tracking-widest text-muted-foreground">
+                        scan_qr_or_pay_to_upi
+                      </p>
+                      <p className="mt-1 font-mono text-lg font-semibold tracking-wide text-primary text-glow-green">
+                        {paymentSettings.upiId}
+                      </p>
+                      <p className="mt-1 font-mono text-xs text-muted-foreground">
+                        Payee: {paymentSettings.payeeName}
+                      </p>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={handleCopyUpi}
+                        className="mt-3 border-primary/30 font-mono text-xs uppercase tracking-widest text-primary"
+                      >
+                        {copied ? (
+                          <><Check className="size-4" /> COPIED</>
+                        ) : (
+                          <><Copy className="size-4" /> COPY UPI ID</>
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between gap-3 rounded-md border border-primary/20 bg-background/80 px-3 py-2.5 backdrop-blur">
+                    <div>
+                      <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                        pay_to_upi
+                      </p>
+                      <p className="font-mono text-base font-semibold tracking-wide text-primary text-glow-green">
+                        {paymentSettings.upiId}
+                      </p>
+                      <p className="font-mono text-[11px] text-muted-foreground">
+                        Payee: {paymentSettings.payeeName}
+                      </p>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={handleCopyUpi}
+                      className="border-primary/30 font-mono text-xs uppercase tracking-widest text-primary"
+                    >
+                      {copied ? (
+                        <><Check className="size-4" /> COPIED</>
+                      ) : (
+                        <><Copy className="size-4" /> COPY</>
+                      )}
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {paymentMethod === "BANK" && (
+              <div className="mb-5 rounded-md border border-primary/30 bg-primary/5 p-4">
+                <p className="mb-3 font-mono text-xs uppercase tracking-widest text-muted-foreground">
+                  bank_transfer_details
+                </p>
+                <div className="space-y-1.5 font-mono text-sm">
+                  <div className="flex justify-between"><span className="text-muted-foreground">Account Name</span><span className="font-semibold">{paymentSettings.bankDetails.accountName}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Account No.</span><span className="font-semibold">{paymentSettings.bankDetails.accountNumber}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">IFSC</span><span className="font-semibold">{paymentSettings.bankDetails.ifsc}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Bank</span><span className="font-semibold">{paymentSettings.bankDetails.bankName}</span></div>
+                </div>
+              </div>
+            )}
 
             {/* Payment methods */}
             <div className="mb-5">
@@ -483,9 +523,9 @@ function CheckoutForm({ course }: { course: Course }) {
               <RadioGroup
                 value={paymentMethod}
                 onValueChange={setPaymentMethod}
-                className="grid grid-cols-1 gap-2 sm:grid-cols-3"
+                className={cn("grid gap-2", paymentMethods.length === 1 ? "grid-cols-1" : paymentMethods.length === 2 ? "grid-cols-2" : "grid-cols-1 sm:grid-cols-3")}
               >
-                {PAYMENT_METHODS.map((m) => (
+                {paymentMethods.map((m) => (
                   <Label
                     key={m.id}
                     htmlFor={`pm-${m.id}`}
@@ -691,10 +731,12 @@ function CheckoutForm({ course }: { course: Course }) {
 // ---------------------------------------------------------------------------
 function SuccessScreen({
   order,
+  greetingMessage,
   onContinue,
   onBack,
 }: {
   order: Order;
+  greetingMessage: string;
   onContinue: () => void;
   onBack: () => void;
 }) {
@@ -749,6 +791,23 @@ function SuccessScreen({
                   </span>
                 </p>
               </motion.div>
+
+              {/* Greeting message from admin payment settings */}
+              {greetingMessage && (
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.15 }}
+                  className="my-4 rounded-md border border-primary/30 bg-primary/5 p-4"
+                >
+                  <p className="font-mono text-[10px] uppercase tracking-widest text-primary/80">
+                    {"// message_from_seller"}
+                  </p>
+                  <p className="mt-1.5 text-sm text-foreground">
+                    {greetingMessage}
+                  </p>
+                </motion.div>
+              )}
 
               <div className="my-6 flex justify-center">
                 <motion.div

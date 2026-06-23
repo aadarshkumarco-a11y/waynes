@@ -263,6 +263,8 @@ interface LmsState extends NavState, AuthState, CartState {
     string,
     { price?: number; comparePrice?: number; featured?: boolean; published?: boolean }
   >;
+  customCourses: Course[]; // admin-added courses (full CRUD)
+  paymentSettings: PaymentSettings; // admin-configured payment options
 
   // Navigation
   navigate: (view: ViewName, params?: Partial<NavState>) => void;
@@ -306,6 +308,14 @@ interface LmsState extends NavState, AuthState, CartState {
     patch: { price?: number; comparePrice?: number; featured?: boolean; published?: boolean }
   ) => void;
   removeCourseOverride: (id: string) => void;
+
+  // Custom courses (full CRUD from admin)
+  addCustomCourse: (course: Course) => void;
+  updateCustomCourse: (id: string, patch: Partial<Course>) => void;
+  deleteCustomCourse: (id: string) => void;
+
+  // Payment settings
+  setPaymentSettings: (patch: Partial<PaymentSettings>) => void;
 
   // Orders
   checkout: (courseId: string, paymentRef: string, paymentMethod: string) => Order;
@@ -381,6 +391,21 @@ export const useLms = create<LmsState>()(
       activities: seedActivities(),
       couponList: seedCoupons,
       courseOverrides: {},
+      customCourses: [],
+      paymentSettings: {
+        upiId: "waynes@upi",
+        payeeName: "Waynes",
+        qrImage: "",
+        methods: { upi: true, bank: true, card: false },
+        bankDetails: {
+          accountName: "Waynes",
+          accountNumber: "00000000000000000",
+          ifsc: "XXXX0000000",
+          bankName: "Your Bank",
+        },
+        instructions: "Make payment via UPI/Bank Transfer, then enter your transaction reference below. We verify and grant access within minutes.",
+        greetingMessage: "Thank you for enrolling! Your payment is being verified. You'll get access within minutes. Check your notifications. — Team Waynes",
+      },
 
       // ---------------- Navigation ----------------
       navigate: (view, params) => {
@@ -543,9 +568,24 @@ export const useLms = create<LmsState>()(
           return { courseOverrides: next };
         }),
 
+      // ---------------- Custom Courses (full CRUD from admin) ----------------
+      addCustomCourse: (course) =>
+        set((s) => ({ customCourses: [course, ...s.customCourses] })),
+      updateCustomCourse: (id, patch) =>
+        set((s) => ({
+          customCourses: s.customCourses.map((c) => (c.id === id ? { ...c, ...patch } : c)),
+        })),
+      deleteCustomCourse: (id) =>
+        set((s) => ({ customCourses: s.customCourses.filter((c) => c.id !== id) })),
+
+      // ---------------- Payment Settings ----------------
+      setPaymentSettings: (patch) =>
+        set((s) => ({ paymentSettings: { ...s.paymentSettings, ...patch } })),
+
       // ---------------- Orders ----------------
       checkout: (courseId, paymentRef, paymentMethod) => {
-        const course = courseMap[courseId];
+        const course = courseMap[courseId] || get().customCourses.find((c) => c.id === courseId);
+        if (!course) throw new Error("Course not found");
         const user = get().user || DEMO_USER;
         const appliedCode = get().appliedCouponCode;
         const res = appliedCode ? get().validateCoupon(appliedCode, course.price, courseId) : null;
@@ -910,6 +950,8 @@ export const useLms = create<LmsState>()(
         activities: s.activities,
         couponList: s.couponList,
         courseOverrides: s.courseOverrides,
+        customCourses: s.customCourses,
+        paymentSettings: s.paymentSettings,
         items: s.items,
         appliedCouponCode: s.appliedCouponCode,
       }),

@@ -11,6 +11,26 @@ export type CourseLevel = "BEGINNER" | "INTERMEDIATE" | "ADVANCED";
 
 export type CouponType = "PERCENT" | "FIXED";
 
+// Admin-configured payment options (no gateway — external verification)
+export interface PaymentSettings {
+  upiId: string;
+  payeeName: string;
+  qrImage: string; // base64 data URL of QR code image
+  methods: {
+    upi: boolean;
+    bank: boolean;
+    card: boolean;
+  };
+  bankDetails: {
+    accountName: string;
+    accountNumber: string;
+    ifsc: string;
+    bankName: string;
+  };
+  instructions: string;
+  greetingMessage: string; // shown after checkout
+}
+
 export type NotificationType =
   | "INFO"
   | "SUCCESS"
