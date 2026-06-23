@@ -13,12 +13,14 @@ import {
   Infinity as InfinityIcon,
   KeyRound,
   Lock,
+  LogIn,
   PlayCircle,
   ShieldCheck,
   Skull,
   Sparkles,
   Tag,
   Terminal,
+  UserPlus,
   X,
   Zap,
 } from "lucide-react";
@@ -271,6 +273,98 @@ function CheckoutForm({ course }: { course: Course }) {
     );
   }
 
+  // ---------------- LOGIN GATE (checkout requires auth) ----------------
+  if (!user) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+        className="relative mx-auto flex min-h-[70vh] w-full max-w-2xl flex-col items-center justify-center px-4 py-12 text-center"
+      >
+        <div className="pointer-events-none absolute inset-0 -z-10 bg-grid opacity-30" />
+        <Card className="terminal-window w-full overflow-hidden p-0">
+          {/* Header */}
+          <div className="relative border-b border-primary/20 bg-primary/10 px-6 py-10 sm:px-12">
+            <div className="absolute inset-0 bg-grid opacity-30" />
+            <div className="relative">
+              <div className="mx-auto mb-5 flex size-16 items-center justify-center rounded-full border border-primary/40 bg-primary/10 text-primary glow-green">
+                <Lock className="size-8" />
+              </div>
+              <p className="font-mono text-xs uppercase tracking-widest text-primary">
+                $ authentication_required
+              </p>
+              <h2 className="mt-2 text-2xl font-bold tracking-tight text-glow-green sm:text-3xl">
+                LOGIN TO CONTINUE
+              </h2>
+              <p className="mt-3 font-mono text-sm text-muted-foreground">
+                <span className="text-primary">&gt;</span> you must be signed in to purchase{" "}
+                <span className="font-semibold text-foreground">{course.title}</span>
+              </p>
+            </div>
+          </div>
+
+          {/* Body */}
+          <div className="p-6 sm:p-8">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Button
+                size="lg"
+                onClick={() => setAuthOpen(true, "login")}
+                className="glow-green gap-2 font-mono uppercase tracking-widest"
+              >
+                <LogIn className="size-4" />
+                Sign In
+              </Button>
+              <Button
+                size="lg"
+                variant="outline"
+                onClick={() => setAuthOpen(true, "signup")}
+                className="border-primary/30 font-mono uppercase tracking-widest text-primary"
+              >
+                <UserPlus className="size-4" />
+                Create Account
+              </Button>
+            </div>
+
+            <div className="my-6 flex items-center gap-3">
+              <div className="h-px flex-1 bg-border" />
+              <span className="font-mono text-xs text-muted-foreground">or</span>
+              <div className="h-px flex-1 bg-border" />
+            </div>
+
+            <Button
+              size="lg"
+              variant="outline"
+              onClick={() => setAuthOpen(true, "login")}
+              className="w-full gap-2 font-mono uppercase tracking-widest"
+            >
+              <ShieldCheck className="size-4 text-primary" />
+              Continue with Google
+            </Button>
+
+            <div className="mt-6 rounded-md border border-primary/20 bg-primary/5 p-3">
+              <p className="font-mono text-[11px] text-muted-foreground">
+                <span className="text-primary">$</span> why sign in?
+              </p>
+              <ul className="mt-1.5 space-y-1 font-mono text-xs text-muted-foreground">
+                <li><span className="text-primary">&gt;</span> Save your courses &amp; progress</li>
+                <li><span className="text-primary">&gt;</span> Get verifiable certificates</li>
+                <li><span className="text-primary">&gt;</span> Receive payment confirmation notifications</li>
+              </ul>
+            </div>
+
+            <button
+              onClick={() => openCourse(course.slug)}
+              className="mt-6 block w-full text-center font-mono text-sm text-muted-foreground transition-colors hover:text-primary"
+            >
+              &lt; back_to_course
+            </button>
+          </div>
+        </Card>
+      </motion.div>
+    );
+  }
+
   // ---------------- MAIN CHECKOUT ----------------
   const txnError = touched && !txnRef.trim();
 
@@ -309,28 +403,7 @@ function CheckoutForm({ course }: { course: Course }) {
       <div className="grid gap-6 lg:grid-cols-[1fr_400px] lg:gap-8">
         {/* LEFT — Payment + coupon */}
         <div className="space-y-6">
-          {/* Sign-in prompt */}
-          {!user && (
-            <Alert className="border-amber-500/40 bg-amber-500/10 text-amber-900 dark:text-amber-100">
-              <KeyRound className="size-4" />
-              <AlertTitle className="font-mono uppercase tracking-widest">
-                &gt; auth_required
-              </AlertTitle>
-              <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <span className="font-mono text-sm">
-                  Sign in to save your progress &amp; receive certificates. Guest
-                  orders are accepted but not recommended.
-                </span>
-                <Button
-                  size="sm"
-                  onClick={() => setAuthOpen(true, "login")}
-                  className="font-mono uppercase tracking-widest"
-                >
-                  Authenticate
-                </Button>
-              </AlertDescription>
-            </Alert>
-          )}
+          {/* (auth gate already handled above — user is guaranteed logged in here) */}
 
           {/* Coupon */}
           <Card className="terminal-window p-5 sm:p-6">

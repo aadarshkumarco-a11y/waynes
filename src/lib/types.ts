@@ -170,6 +170,7 @@ export interface Course {
   instructorId: string;
   categoryId: string;
   tags: string[];
+  downloadUrl?: string; // optional resource download link for enrolled students
   createdAt: string;
   updatedAt: string;
   sections: Section[];

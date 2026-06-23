@@ -245,15 +245,33 @@ function PurchaseCard({
         {/* CTAs */}
         <div className="flex flex-col gap-2">
           {enrolled ? (
-            <Button
-              size="lg"
-              onClick={onContinue}
-              className="glow-green gap-2 font-mono uppercase tracking-widest"
-            >
-              <PlayCircle className="size-4" />
-              {progress && progress > 0 ? "Continue Learning" : "Go to Course"}
-              <ArrowRight className="size-4" />
-            </Button>
+            <>
+              <Button
+                size="lg"
+                onClick={onContinue}
+                className="glow-green gap-2 font-mono uppercase tracking-widest"
+              >
+                <PlayCircle className="size-4" />
+                {progress && progress > 0 ? "Continue Learning" : "Go to Course"}
+                <ArrowRight className="size-4" />
+              </Button>
+              {course.downloadUrl && (
+                <a
+                  href={course.downloadUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    className="w-full gap-2 border-primary/30 font-mono uppercase tracking-widest text-primary"
+                  >
+                    <Download className="size-4" />
+                    Download Resources
+                  </Button>
+                </a>
+              )}
+            </>
           ) : inCart ? (
             <>
               <Button

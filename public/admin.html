@@ -607,7 +607,18 @@ function openCourseForm(id){
       <div class="field"><label>Course Title *</label><input id="cf_title" placeholder="Ethical Hacking Bootcamp" value="${esc(c?.title||'')}"/></div>
       <div class="field"><label>Subtitle</label><input id="cf_subtitle" placeholder="Go from beginner to pro" value="${esc(c?.subtitle||'')}"/></div>
       <div class="field"><label>Description</label><textarea id="cf_desc" placeholder="Course description...">${esc(c?.description||'')}</textarea></div>
-      <div class="field"><label>Thumbnail URL</label><input id="cf_thumb" placeholder="https://..." value="${esc(c?.thumbnail||'')}"/></div>
+      <div class="field">
+        <label>Thumbnail Image</label>
+        <div style="display:flex;align-items:center;gap:12px">
+          ${c?.thumbnail?`<img id="cf_thumb_preview" src="${esc(c.thumbnail)}" alt="" style="width:80px;height:50px;object-fit:cover;border:1px solid var(--border);border-radius:8px;background:#000"/>`:`<div id="cf_thumb_preview" style="width:80px;height:50px;border:1px dashed var(--border);border-radius:8px;display:grid;place-items:center;color:var(--muted);font-size:9px">No img</div>`}
+          <div style="flex:1">
+            <label class="btn sm" style="cursor:pointer">Upload Image<input type="file" accept="image/*" style="display:none" onchange="uploadCourseThumb(event)"/></label>
+            <input id="cf_thumb" type="hidden" value="${esc(c?.thumbnail||'')}"/>
+            <input id="cf_thumb_url" placeholder="...or paste image URL" value="${esc(c?.thumbnail&&c.thumbnail.startsWith('http')?c.thumbnail:'')}" style="margin-top:6px" oninput="syncCourseThumb()"/>
+          </div>
+        </div>
+      </div>
+      <div class="field"><label>Download Link (for enrolled students — Google Drive, Dropbox, etc.)</label><input id="cf_download" placeholder="https://drive.google.com/..." value="${esc(c?.downloadUrl||'')}"/></div>
       <div class="grid-2">
         <div class="field"><label>Price (INR) *</label><input id="cf_price" type="number" value="${c?.price||4999}"/></div>
         <div class="field"><label>Compare Price (INR)</label><input id="cf_compare" type="number" value="${c?.comparePrice||''}"/></div>
@@ -629,13 +640,35 @@ function openCourseForm(id){
     </div>`;
   $("#modal").classList.add("open");
 }
+function uploadCourseThumb(e){
+  const f=e.target.files[0];if(!f)return;
+  if(f.size>800000){toast("Image too large (max 800KB)",1);return}
+  const r=new FileReader();
+  r.onload=()=>{
+    $("#cf_thumb").value=r.result;
+    const prev=$("#cf_thumb_preview");
+    if(prev.tagName==='IMG'){prev.src=r.result}else{const img=document.createElement('img');img.id='cf_thumb_preview';img.src=r.result;img.style.cssText='width:80px;height:50px;object-fit:cover;border:1px solid var(--border);border-radius:8px;background:#000';prev.replaceWith(img)}
+    $("#cf_thumb_url").value="";
+    toast("Thumbnail uploaded");
+  };
+  r.readAsDataURL(f);
+}
+function syncCourseThumb(){
+  const url=($("#cf_thumb_url").value||"").trim();
+  $("#cf_thumb").value=url;
+  const prev=$("#cf_thumb_preview");
+  if(url){
+    if(prev.tagName==='IMG'){prev.src=url}else{const img=document.createElement('img');img.id='cf_thumb_preview';img.src=url;img.style.cssText='width:80px;height:50px;object-fit:cover;border:1px solid var(--border);border-radius:8px;background:#000';prev.replaceWith(img)}
+  }
+}
 function saveCourseForm(id){
   const title=($("#cf_title").value||"").trim();
   if(!title){toast("Enter a title",1);return}
   const price=Number($("#cf_price").value)||0;
   const subtitle=($("#cf_subtitle").value||"").trim();
   const desc=($("#cf_desc").value||"").trim();
-  const thumb=($("#cf_thumb").value||"").trim()||"https://picsum.photos/seed/"+encodeURIComponent(title)+"/800/450";
+  const thumb=($("#cf_thumb").value||"").trim()||($("#cf_thumb_url").value||"").trim()||"https://picsum.photos/seed/"+encodeURIComponent(title)+"/800/450";
+  const downloadUrl=($("#cf_download").value||"").trim()||undefined;
   const compare=($("#cf_compare").value)?Number($("#cf_compare").value):undefined;
   const level=($("#cf_level").value||"BEGINNER");
   const instructor=($("#cf_instructor").value||"Admin").trim();
@@ -645,13 +678,13 @@ function saveCourseForm(id){
   const published=$("#cf_published").checked;
   update(s=>{
     if(id){
-      s.customCourses=s.customCourses.map(c=>c.id===id?{...c,title,subtitle,description:desc,thumbnail:thumb,price,comparePrice:compare,level,instructorId:instructor,benefits,requirements,featured,published,updatedAt:new Date().toISOString()}:c);
+      s.customCourses=s.customCourses.map(c=>c.id===id?{...c,title,subtitle,description:desc,thumbnail:thumb,downloadUrl,price,comparePrice:compare,level,instructorId:instructor,benefits,requirements,featured,published,updatedAt:new Date().toISOString()}:c);
       log(s,"COURSE_EDITED","Edited course: "+title);
     }else{
       const nid="custom-"+Date.now();
       const slug=title.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')+'-'+nid.slice(-4);
       s.customCourses.unshift({
-        id:nid,slug,title,subtitle,description:desc,thumbnail:thumb,price,comparePrice:compare,currency:"INR",level,language:"English",durationMins:0,benefits,requirements,faqs:[],featured,published,rating:0,reviewCount:0,studentCount:0,instructorId:instructor,categoryId:"cat-web",tags:[],sections:[],createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()
+        id:nid,slug,title,subtitle,description:desc,thumbnail:thumb,downloadUrl,price,comparePrice:compare,currency:"INR",level,language:"English",durationMins:0,benefits,requirements,faqs:[],featured,published,rating:0,reviewCount:0,studentCount:0,instructorId:instructor,categoryId:"cat-web",tags:[],sections:[],createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()
       });
       log(s,"COURSE_CREATED","Created course: "+title);
     }
