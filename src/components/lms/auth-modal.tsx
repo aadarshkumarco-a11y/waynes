@@ -83,36 +83,44 @@ export function AuthModal() {
 
   const setMode = (m: AuthMode) => useLms.setState({ authMode: m });
 
-  const onLogin = (v: LoginValues) => {
+  const onLogin = async (v: LoginValues) => {
     setLoading(true);
-    setTimeout(() => {
-      const res = login(v.email, v.password);
-      setLoading(false);
+    try {
+      const res = await login(v.email, v.password);
       if (res.ok) toast.success("Access granted. Welcome back.");
       else toast.error(res.message);
-    }, 400);
-  };
-  const onSignup = (v: SignupValues) => {
-    setLoading(true);
-    setTimeout(() => {
-      const res = signup(v.name, v.email, v.password);
+    } catch {
+      toast.error("Login failed. Try again.");
+    } finally {
       setLoading(false);
-      if (res.ok) toast.success("Account provisioned. Welcome to waynes.");
+    }
+  };
+  const onSignup = async (v: SignupValues) => {
+    setLoading(true);
+    try {
+      const res = await signup(v.name, v.email, v.password);
+      if (res.ok) toast.success("Account provisioned. Welcome to Waynes.");
       else toast.error(res.message);
-    }, 500);
+    } catch {
+      toast.error("Sign up failed. Try again.");
+    } finally {
+      setLoading(false);
+    }
   };
   const onForgot = (v: ForgotValues) => {
     const res = resetPassword(v.email);
     if (res.ok) toast.success(res.message);
     else toast.error(res.message);
   };
-  const onGoogle = () => {
+  const onGoogle = async () => {
     setLoading(true);
-    setTimeout(() => {
-      loginWithGoogle();
+    try {
+      await loginWithGoogle();
+    } catch {
+      toast.error("Google sign-in failed.");
+    } finally {
       setLoading(false);
-      toast.success("OAuth handshake complete");
-    }, 500);
+    }
   };
 
   const meta = MODE_META[authMode];

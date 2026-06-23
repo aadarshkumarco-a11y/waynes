@@ -280,9 +280,9 @@ interface LmsState extends NavState, AuthState, CartState {
 
   // Auth
   setAuthOpen: (open: boolean, mode?: "login" | "signup" | "forgot") => void;
-  login: (email: string, password: string) => { ok: boolean; message: string };
-  signup: (name: string, email: string, password: string) => { ok: boolean; message: string };
-  loginWithGoogle: () => void;
+  login: (email: string, password: string) => Promise<{ ok: boolean; message: string }>;
+  signup: (name: string, email: string, password: string) => Promise<{ ok: boolean; message: string }>;
+  loginWithGoogle: () => Promise<void>;
   logout: () => void;
   enterAdminDemo: () => void;
   enterStudentDemo: () => void;
@@ -442,46 +442,92 @@ export const useLms = create<LmsState>()(
         if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
       },
 
-      // ---------------- Auth ----------------
+      // ---------------- Auth (Firebase-backed) ----------------
       setAuthOpen: (open, mode = "login") => set({ authOpen: open, authMode: mode }),
-      login: (email, _password) => {
+      login: async (email, password) => {
         if (!email || !email.includes("@")) return { ok: false, message: "Enter a valid email." };
-        const isAdmin = email.toLowerCase() === "admin@waynes.io";
-        const user: User = isAdmin
-          ? DEMO_ADMIN
-          : { ...DEMO_USER, email, name: email.split("@")[0].replace(/[^a-zA-Z]/g, " ").trim() || "Student" };
-        set({ user, authOpen: false });
-        get().addActivity("LOGIN", `${user.name} signed in`);
-        return { ok: true, message: "Logged in" };
+        const { firebaseLogin } = await import("@/lib/firebase");
+        const res = await firebaseLogin(email, password);
+        if (res.ok && res.user) {
+          set({
+            user: {
+              id: res.user.id,
+              email: res.user.email,
+              name: res.user.name,
+              avatar: res.user.avatar,
+              role: "STUDENT",
+              title: "Learner",
+              provider: "email",
+              emailVerified: true,
+            },
+            authOpen: false,
+          });
+          get().addActivity("LOGIN", `${res.user.name} signed in`);
+        }
+        return { ok: res.ok, message: res.message };
       },
-      signup: (name, email, _password) => {
+      signup: async (name, email, password) => {
         if (!name || !email.includes("@")) return { ok: false, message: "Please fill all fields correctly." };
-        const user: User = {
-          id: `user-${Date.now()}`,
-          email,
-          name,
-          avatar: `https://i.pravatar.cc/120?u=${encodeURIComponent(email)}`,
-          role: "STUDENT",
-          provider: "email",
-          emailVerified: true,
-        };
-        set({ user, authOpen: false });
-        get().addNotification({
-          type: "SUCCESS",
-          title: "Welcome to Waynes 🎉",
-          body: `Hi ${name}, your account is ready. Start exploring courses!`,
-        });
-        get().addActivity("SIGNUP", `${name} created an account`);
-        return { ok: true, message: "Account created" };
+        if (!password || password.length < 6) return { ok: false, message: "Password must be at least 6 characters." };
+        const { firebaseSignup } = await import("@/lib/firebase");
+        const res = await firebaseSignup(name, email, password);
+        if (res.ok && res.user) {
+          set({
+            user: {
+              id: res.user.id,
+              email: res.user.email,
+              name: res.user.name,
+              avatar: res.user.avatar,
+              role: "STUDENT",
+              title: "Learner",
+              provider: "email",
+              emailVerified: true,
+            },
+            authOpen: false,
+          });
+          get().addNotification({
+            type: "SUCCESS",
+            title: "Welcome to Waynes 🎉",
+            body: `Hi ${name}, your account is ready. Start exploring courses!`,
+          });
+          get().addActivity("SIGNUP", `${name} created an account`);
+        }
+        return { ok: res.ok, message: res.message };
       },
-      loginWithGoogle: () => {
-        const user: User = { ...DEMO_USER, provider: "google" };
-        set({ user, authOpen: false });
-        get().addActivity("LOGIN", `${user.name} signed in with Google`);
+      loginWithGoogle: async () => {
+        const { firebaseLoginWithGoogle } = await import("@/lib/firebase");
+        const res = await firebaseLoginWithGoogle();
+        if (res.ok && res.user) {
+          set({
+            user: {
+              id: res.user.id,
+              email: res.user.email,
+              name: res.user.name,
+              avatar: res.user.avatar,
+              role: "STUDENT",
+              title: "Learner",
+              provider: "google",
+              emailVerified: true,
+            },
+            authOpen: false,
+          });
+          get().addActivity("LOGIN", `${res.user.name} signed in with Google`);
+        } else if (!res.ok) {
+          // surface error via a notification so the user sees why
+          get().addNotification({
+            type: "WARNING",
+            title: "Google sign-in failed",
+            body: res.message,
+          });
+        }
       },
       logout: () => {
+        const wasAdmin = get().user?.role === "SUPER_ADMIN";
         get().addActivity("LOGOUT", "User signed out");
-        set({ user: null, view: "home" });
+        // Sign out of Firebase (async, but don't block UI)
+        import("@/lib/firebase").then(({ firebaseLogout }) => firebaseLogout());
+        // Demo admin is local-only — clearing the store is enough.
+        set({ user: null, view: wasAdmin ? "home" : "home" });
         get().scrollTop();
       },
       enterAdminDemo: () => {

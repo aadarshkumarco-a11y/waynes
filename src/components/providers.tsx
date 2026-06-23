@@ -4,6 +4,7 @@ import { ThemeProvider } from "next-themes";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useEffect, useState, type ReactNode } from "react";
 import { useLms } from "@/lib/store";
+import { FirebaseAuthProvider } from "@/components/firebase-auth-provider";
 
 export function Providers({ children }: { children: ReactNode }) {
   const [client] = useState(
@@ -33,7 +34,9 @@ export function Providers({ children }: { children: ReactNode }) {
 
   return (
     <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
-      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+      <QueryClientProvider client={client}>
+        <FirebaseAuthProvider>{children}</FirebaseAuthProvider>
+      </QueryClientProvider>
     </ThemeProvider>
   );
 }
