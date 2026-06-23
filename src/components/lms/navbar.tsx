@@ -211,11 +211,11 @@ export function Navbar() {
               </DropdownMenu>
             ) : (
               <Button
-                size="sm"
-                className="ml-1 gap-1.5 rounded-md gradient-brand font-mono text-xs font-bold uppercase tracking-wider text-white shadow-glow hover:opacity-90"
+                size="default"
+                className="ml-2 gap-2 rounded-lg gradient-brand px-5 py-2 font-mono text-sm font-bold uppercase tracking-wider text-white shadow-glow transition-all hover:scale-105 hover:opacity-95"
                 onClick={() => setAuthOpen(true, "login")}
               >
-                <LogIn className="size-3.5" /> Login
+                <LogIn className="size-4" /> Login
               </Button>
             )}
 
@@ -279,17 +279,17 @@ export function Navbar() {
                 {!user && (
                   <div className="mt-auto flex flex-col gap-2 border-t border-primary/20 px-5 py-4">
                     <Button
-                      onClick={() => setAuthOpen(true, "login")}
-                      className="w-full gap-1.5 rounded-md font-mono text-xs uppercase tracking-wider"
+                      onClick={() => { setAuthOpen(true, "login"); setMobileMenuOpen(false); }}
+                      className="w-full gap-2 rounded-lg gradient-brand px-5 py-3 font-mono text-sm font-bold uppercase tracking-wider text-white shadow-glow"
                     >
-                      <Terminal className="size-3.5" /> Access Terminal
+                      <LogIn className="size-4" /> Login
                     </Button>
                     <Button
                       variant="outline"
-                      onClick={() => setAuthOpen(true, "signup")}
-                      className="w-full gap-1.5 rounded-md border-primary/40 font-mono text-xs uppercase tracking-wider text-primary hover:bg-primary/10 hover:text-primary"
+                      onClick={() => { setAuthOpen(true, "signup"); setMobileMenuOpen(false); }}
+                      className="w-full gap-1.5 rounded-lg border-primary/40 py-3 font-mono text-sm uppercase tracking-wider text-primary hover:bg-primary/10 hover:text-primary"
                     >
-                      Create Access
+                      Create Account
                     </Button>
                   </div>
                 )}

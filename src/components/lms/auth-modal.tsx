@@ -126,8 +126,13 @@ export function AuthModal() {
   const meta = MODE_META[authMode];
 
   return (
-    <Dialog open={authOpen} onOpenChange={(o) => setAuthOpen(o)}>
-      <DialogContent className="terminal-window scanlines relative max-w-md overflow-hidden p-0">
+    <Dialog open={authOpen} onOpenChange={(o) => { /* Mandatory login — prevent closing by clicking outside */ if (!o && !user) return; setAuthOpen(o); }}>
+      <DialogContent
+        className="terminal-window scanlines relative max-w-md overflow-hidden p-0"
+        onEscapeKeyDown={(e) => { if (!user) e.preventDefault(); }}
+        onPointerDownOutside={(e) => { if (!user) e.preventDefault(); }}
+        onInteractOutside={(e) => { if (!user) e.preventDefault(); }}
+      >
         {/* Terminal title bar */}
         <div className="flex items-center justify-between border-b border-primary/30 bg-background/80 px-4 py-2.5">
           <div className="flex items-center gap-2">
@@ -329,30 +334,39 @@ export function AuthModal() {
 
           {authMode !== "forgot" && (
             <>
-              <Divider />
-              <Button
-                variant="outline"
-                className="w-full gap-2 rounded-none border-border/50 font-mono text-xs uppercase tracking-wider"
-                onClick={onGoogle}
-                disabled={loading}
-              >
-                <GoogleIcon /> OAuth · Google
-              </Button>
-
-              <div className="mt-4 rounded-md border border-dashed border-primary/30 bg-primary/5 p-3">
-                <p className="mb-2 text-center font-mono text-[11px] font-semibold uppercase tracking-wider text-primary/80">
-                  {"> "}Quick Access
-                </p>
+              {/* Google Login — PROMINENT, at top */}
+              <div className="mb-4">
                 <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={enterStudentDemo}
-                  className="w-full gap-1.5 rounded-none border-primary/40 font-mono text-xs uppercase tracking-wider text-primary hover:bg-primary/10 hover:text-primary"
+                  variant="default"
+                  className="w-full gap-3 rounded-lg bg-white px-6 py-3.5 text-base font-bold text-gray-900 shadow-lg transition-all hover:scale-[1.02] hover:bg-gray-50"
+                  onClick={onGoogle}
+                  disabled={loading}
                 >
-                  <UserIcon className="size-3.5" /> Explore as Student
+                  <GoogleIcon /> Sign in with Google
                 </Button>
               </div>
+
+              <Divider />
+
+              {/* Email login form below */}
             </>
+          )}
+
+          {/* Guest access / Explore as student */}
+          {authMode !== "forgot" && (
+            <div className="mt-4 rounded-md border border-dashed border-primary/30 bg-primary/5 p-3">
+              <p className="mb-2 text-center font-mono text-[11px] font-semibold uppercase tracking-wider text-primary/80">
+                {"> "}Continue as Guest
+              </p>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={enterStudentDemo}
+                className="w-full gap-1.5 rounded-none border-primary/40 font-mono text-xs uppercase tracking-wider text-primary hover:bg-primary/10 hover:text-primary"
+              >
+                <UserIcon className="size-3.5" /> Explore as Guest
+              </Button>
+            </div>
           )}
 
           {authMode === "login" && (

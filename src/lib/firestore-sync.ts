@@ -1,7 +1,10 @@
-// Firestore real-time sync module.
-// Listens for changes to courses, payment settings, and user notifications
-// from Firestore, merging them into the Zustand store.
-// Admin panel (admin.html) writes to Firestore; this module picks up changes.
+// =============================================================================
+// Firestore real-time sync module — SINGLE SOURCE OF TRUTH
+// =============================================================================
+// Courses, payment settings, and notifications come ONLY from Firestore.
+// The Zustand store is a read-cache populated by these listeners.
+// No localStorage merge — Firestore REPLACES local course data entirely.
+// =============================================================================
 
 import {
   collection,
@@ -22,13 +25,15 @@ let started = false;
 
 /**
  * Start listening to Firestore for real-time updates.
- * Call once after Firebase auth is ready.
+ * Call once after Firebase auth is ready (or immediately for public data).
  */
 export function startFirestoreSync(userId: string | null) {
   // Always tear down previous listeners
   stopFirestoreSync();
 
-  // 1. Courses collection — admin-added courses appear instantly
+  console.log("[firestore-sync] starting sync, userId:", userId || "anonymous");
+
+  // 1. Courses collection — REPLACE local courses entirely with Firestore data
   try {
     coursesUnsub = onSnapshot(
       collection(db, "courses"),
@@ -36,24 +41,22 @@ export function startFirestoreSync(userId: string | null) {
         const firestoreCourses: Course[] = [];
         snap.forEach((d) => {
           const data = d.data() as Course;
-          if (data && data.id) {
+          if (data) {
             firestoreCourses.push({ ...data, id: d.id });
           }
         });
-        // Merge: keep local custom courses that aren't in Firestore,
-        // plus all Firestore courses
-        const localCustoms = useLms.getState().customCourses;
-        const firestoreIds = new Set(firestoreCourses.map((c) => c.id));
-        const localOnly = localCustoms.filter((c) => !firestoreIds.has(c.id));
-        useLms.setState({ customCourses: [...firestoreCourses, ...localOnly] });
+        console.log("[firestore-sync] courses read SUCCESS:", firestoreCourses.length, "courses from Firestore");
+        // REPLACE — not merge. Firestore is the single source of truth.
+        useLms.setState({ customCourses: firestoreCourses });
       },
       (err) => {
-        // Silently fail — Firestore rules might not be set up yet
-        console.warn("[firestore-sync] courses listener error:", err.message);
+        console.error("[firestore-sync] courses read FAILED:", err.code, err.message);
+        // On error, show empty (not stale localStorage data)
+        useLms.setState({ customCourses: [] });
       }
     );
-  } catch (e) {
-    console.warn("[firestore-sync] courses listen failed:", e);
+  } catch (e: any) {
+    console.error("[firestore-sync] courses listen setup failed:", e.message);
   }
 
   // 2. Payment settings doc
@@ -63,15 +66,18 @@ export function startFirestoreSync(userId: string | null) {
       (snap) => {
         if (snap.exists()) {
           const data = snap.data() as Partial<PaymentSettings>;
+          console.log("[firestore-sync] payment settings read SUCCESS");
           useLms.getState().setPaymentSettings(data);
+        } else {
+          console.log("[firestore-sync] payment settings doc does not exist yet");
         }
       },
       (err) => {
-        console.warn("[firestore-sync] payment listener error:", err.message);
+        console.error("[firestore-sync] payment settings read FAILED:", err.code, err.message);
       }
     );
-  } catch (e) {
-    console.warn("[firestore-sync] payment listen failed:", e);
+  } catch (e: any) {
+    console.error("[firestore-sync] payment listen setup failed:", e.message);
   }
 
   // 3. User notifications (only if logged in)
@@ -95,7 +101,8 @@ export function startFirestoreSync(userId: string | null) {
               } as Notification);
             }
           });
-          // Merge Firestore notifications into store (avoid duplicates by id)
+          console.log("[firestore-sync] notifications read SUCCESS:", fsNotifs.length, "for user", userId);
+          // Merge: add new Firestore notifications that aren't already in store
           const existing = useLms.getState().notifications;
           const existingIds = new Set(existing.map((n) => n.id));
           const newOnes = fsNotifs.filter((n) => !existingIds.has(n.id));
@@ -106,15 +113,16 @@ export function startFirestoreSync(userId: string | null) {
           }
         },
         (err) => {
-          console.warn("[firestore-sync] notifications listener error:", err.message);
+          console.error("[firestore-sync] notifications read FAILED:", err.code, err.message);
         }
       );
-    } catch (e) {
-      console.warn("[firestore-sync] notifications listen failed:", e);
+    } catch (e: any) {
+      console.error("[firestore-sync] notifications listen setup failed:", e.message);
     }
   }
 
   started = true;
+  console.log("[firestore-sync] sync started successfully");
 }
 
 export function stopFirestoreSync() {
@@ -122,6 +130,7 @@ export function stopFirestoreSync() {
   if (paymentUnsub) { paymentUnsub(); paymentUnsub = null; }
   if (notifUnsub) { notifUnsub(); notifUnsub = null; }
   started = false;
+  console.log("[firestore-sync] sync stopped");
 }
 
 export function isSyncRunning() {

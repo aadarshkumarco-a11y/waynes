@@ -66,23 +66,25 @@ function renderView(view: string) {
 export default function Home() {
   const view = useLms((s) => s.view);
   const user = useLms((s) => s.user);
+  const authOpen = useLms((s) => s.authOpen);
   const setAuthOpen = useLms((s) => s.setAuthOpen);
   const mounted = useMounted();
 
-  // First-visit login prompt: open auth modal once if user has never
-  // logged in (tracked via localStorage flag so it doesn't nag returning users).
+  // MANDATORY LOGIN: auto-open auth modal on every visit if not logged in.
+  // The modal blocks all interaction with the background until user logs in
+  // or chooses to continue as guest.
   useEffect(() => {
     if (!mounted) return;
-    try {
-      const seen = localStorage.getItem("waynes-welcome-shown");
-      if (!seen && !user) {
-        setAuthOpen(true, "login");
-        localStorage.setItem("waynes-welcome-shown", "1");
-      }
-    } catch {
-      // ignore (WebView / private mode)
+    if (!user && !authOpen) {
+      // Small delay to let Firebase restore any existing session
+      const t = setTimeout(() => {
+        if (!useLms.getState().user) {
+          setAuthOpen(true, "login");
+        }
+      }, 800);
+      return () => clearTimeout(t);
     }
-  }, [mounted, user, setAuthOpen]);
+  }, [mounted, user, authOpen, setAuthOpen]);
 
   if (!mounted) {
     return (
